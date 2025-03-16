@@ -14,22 +14,49 @@ import ChatConversation from '../components/ChatConversation.vue';
 import { ElInput } from 'element-plus';
 import { Promotion } from '@element-plus/icons-vue';
 import { axiosInstance } from '../services/http';
+import { type Message } from '../components/ChatConversation.vue';
 
 const textarea = ref('');
-interface Message {
-  role: string;
-  content: string;
-}
 
 const messages = ref<Message[]>([]);
 
 const sendMessage = async () => {
   const userMessage = { 'role': 'user', 'content': textarea.value };
+  messages.value.push(userMessage);
+  const assistantMessage = ref<Message>({ 'role': 'assistant', 'content': '', 'state': 'loading' })
+  messages.value.push(assistantMessage.value)
+  textarea.value = '';
+
   try {
-    const response = await axiosInstance.post('/chat/1/', userMessage);
-    messages.value.push(userMessage);
-    messages.value.push({ 'role': 'assistant', 'content': response.data.response });
-    textarea.value = '';
+    // axios不支持responseType为stream
+    const baseURL = axiosInstance.defaults.baseURL;
+    const url = baseURL + '/chat/1/';
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userMessage)
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.body) throw new Error(`HTTP body empty! status: ${response.status}`);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      console.log('Received chunk:', chunk);
+      assistantMessage.value.content += chunk;
+    }
+    assistantMessage.value.state = 'completed';
+
+    reader.releaseLock();
   } catch (error) {
     console.error('Error sending message:', error);
   }
