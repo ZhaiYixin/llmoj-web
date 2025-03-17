@@ -14,9 +14,7 @@ a,
   }
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+#app {
+  width: 100vw;
+  height: 100vh;
 }

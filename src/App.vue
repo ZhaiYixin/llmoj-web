@@ -3,17 +3,7 @@ import { RouterLink, RouterView } from 'vue-router'
 </script>
 
 <template>
-  <div class="app-container">
-    <RouterView />
-  </div>
+  <RouterView style="width: 100vw; height: 100vh;" />
 </template>
 
-<style scoped>
-.app-container {
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-</style>
+<style scoped></style>
