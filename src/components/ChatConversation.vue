@@ -1,9 +1,11 @@
 <template>
   <div class="chat-conversation">
     <div v-for="(message, index) in props.messages" :key="index" :class="['message', message.role]">
-      <p>{{ message.content }}<el-icon v-if="message.state == 'loading'" color="#409efc" class="loading-icon">
-          <Loading />
-        </el-icon></p>
+      <p v-html="compiledMarkdown(message.content)">
+      </p>
+      <el-icon v-if="message.state == 'loading'" color="#409efc" class="loading-icon">
+        <Loading />
+      </el-icon>
     </div>
   </div>
 </template>
@@ -12,6 +14,10 @@
 import { defineProps } from 'vue';
 import { ElIcon } from 'element-plus';
 import { Loading } from '@element-plus/icons-vue';
+import { Marked } from 'marked';
+import { markedHighlight } from 'marked-highlight';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/atom-one-light.css';
 
 export interface Message {
   content: string;
@@ -25,6 +31,22 @@ const props = defineProps({
     default: () => [],
   },
 });
+
+// 配置 marked 使用 highlight.js
+const marked = new Marked(
+  markedHighlight({
+    emptyLangClass: 'hljs',
+    langPrefix: 'hljs language-',
+    highlight(code, lang, info) {
+      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+      return hljs.highlight(code, { language }).value;
+    }
+  })
+);
+
+const compiledMarkdown = (content: string) => {
+  return marked.parse(content);
+};
 </script>
 
 <style scoped>
