@@ -5,7 +5,7 @@
   <div class="sticky-footer">
     <el-input v-model="textareaValue" style="width: 100%" :rows="2" type="textarea" placeholder="Please input"
       @keydown.enter.prevent @keyup.enter="handleKeyUpEnter" :disabled="sendDisabled" />
-    <el-button class="send-button" @click="emitSendMessage" type="primary" :icon="Promotion" circle
+    <el-button class="send-button" @click="sendBegin()" type="primary" :icon="Promotion" circle
       :disabled="sendDisabled" />
   </div>
 </template>
@@ -19,15 +19,18 @@ const emit = defineEmits(['sendMessage']);
 const textareaValue = ref('');
 const sendDisabled = ref(false);
 
-const handleKeyUpEnter = (e: KeyboardEvent) => {
+const handleKeyUpEnter = async (e: KeyboardEvent) => {
   if (e.ctrlKey || e.shiftKey) {
     textareaValue.value += '\n';
   } else {
-    emitSendMessage();
+    sendBegin();
   }
 };
 
-const emitSendMessage = () => {
+const sendBegin = async (newTextareaValue?: string) => {
+  if (newTextareaValue) {
+    textareaValue.value = newTextareaValue;
+  }
   try {
     sendDisabled.value = true;
     emit('sendMessage', textareaValue.value);
@@ -37,12 +40,12 @@ const emitSendMessage = () => {
   }
 };
 
-const clearMessage = () => {
+const sendEnd = async () => {
   textareaValue.value = '';
   sendDisabled.value = false;
 };
 
-defineExpose({ clearMessage });
+defineExpose({ sendBegin, sendEnd });
 </script>
 
 <style scoped>

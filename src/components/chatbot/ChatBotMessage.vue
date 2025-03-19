@@ -9,7 +9,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue';
 import LoadingIcon from './LoadingIcon.vue';
 import { Marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';

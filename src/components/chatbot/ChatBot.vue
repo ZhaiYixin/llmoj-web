@@ -3,7 +3,8 @@
 
 <template>
   <ScrollableContainer ref="chatContainer" v-loading="loading">
-    <ChatBotOutput :messages="messages" style="flex-grow: 1; flex-shrink: 1;" />
+    <ChatBotOutput style="flex-grow: 1; flex-shrink: 1;" :messages="messages" :recommendations="recommendations"
+      @recommendation-click="handleRecommendationClick" />
     <ChatBotInput ref="chatBotInput" @sendMessage="sendMessage" />
   </ScrollableContainer>
 </template>
@@ -18,6 +19,7 @@ import ScrollableContainer from './ScrollableContainer.vue';
 import { fetchStreamResponse } from '../../services/streamService';
 
 const messages = ref<ChatBotMessageModel[]>([]);
+const recommendations = ref<string[]>([]);
 const chatContainer = ref();
 const loading = ref(true);
 const chatBotInput = ref();
@@ -25,7 +27,7 @@ const chatBotInput = ref();
 // 加载聊天对话
 const loadMessages = async () => {
   try {
-    const response = await axiosInstance.get('/chat/2/');
+    const response = await axiosInstance.get('/chat/3/messages');
     messages.value = response.data.messages;
     await nextTick();
     chatContainer.value.scrollToBottom();
@@ -37,6 +39,7 @@ const loadMessages = async () => {
 
 // 发送消息和接收回答
 const sendMessage = async (messageContent: string) => {
+  recommendations.value = [];
   const userMessage = { 'role': 'user', 'content': messageContent };
   const assistantMessage = ref<ChatBotMessageModel>({ 'role': 'assistant', 'content': '', 'state': 'loading' });
   messages.value.push(userMessage);
@@ -45,24 +48,35 @@ const sendMessage = async (messageContent: string) => {
   chatContainer.value.scrollToBottom();
 
   try {
-    await fetchStreamResponse(
-      `${axiosInstance.defaults.baseURL}/chat/2/`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userMessage),
-        onChunkReceived: (chunk) => {
-          if (assistantMessage.value.content == "") chatContainer.value.scrollToBottom();
-          assistantMessage.value.content += chunk;
-          chatContainer.value.scrollToBottomIfNear();
+    await axiosInstance.post('/chat/3/ask', JSON.stringify(userMessage));
+
+    // 并行请求回答和推荐问题
+    const [_, recommendationsResponse] = await Promise.all([
+      fetchStreamResponse(
+        `${axiosInstance.defaults.baseURL}/chat/3/answer`,
+        {
+          method: 'GET',
+          onChunkReceived: (chunk) => {
+            if (assistantMessage.value.content == "") chatContainer.value.scrollToBottom();
+            assistantMessage.value.content += chunk;
+            chatContainer.value.scrollToBottomIfNear();
+          }
         }
-      }
-    );
+      ),
+      axiosInstance.get('/chat/3/recommendations')
+    ]);
+
     assistantMessage.value.state = 'completed';
-    chatBotInput.value.clearMessage();
+    chatBotInput.value.sendEnd();
+    recommendations.value = recommendationsResponse.data.recommendations;
   } catch (error) {
     console.error('Error sending message:', error);
   }
+};
+
+// 当用户点击了推荐的提问
+const handleRecommendationClick = async (recommendation: string) => {
+  chatBotInput.value.sendBegin(recommendation);
 };
 
 onMounted(loadMessages);
