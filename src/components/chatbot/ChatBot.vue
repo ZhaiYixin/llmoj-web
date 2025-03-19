@@ -50,25 +50,25 @@ const sendMessage = async (messageContent: string) => {
   try {
     await axiosInstance.post('/chat/3/ask', JSON.stringify(userMessage));
 
-    // 并行请求回答和推荐问题
-    const [_, recommendationsResponse] = await Promise.all([
-      fetchStreamResponse(
-        `${axiosInstance.defaults.baseURL}/chat/3/answer`,
-        {
-          method: 'GET',
-          onChunkReceived: (chunk) => {
-            if (assistantMessage.value.content == "") chatContainer.value.scrollToBottom();
-            assistantMessage.value.content += chunk;
-            chatContainer.value.scrollToBottomIfNear();
-          }
+    await fetchStreamResponse(
+      `${axiosInstance.defaults.baseURL}/chat/3/answer`,
+      {
+        method: 'GET',
+        onChunkReceived: (chunk) => {
+          if (assistantMessage.value.content == "") chatContainer.value.scrollToBottom();
+          assistantMessage.value.content += chunk;
+          chatContainer.value.scrollToBottomIfNear();
         }
-      ),
-      axiosInstance.get('/chat/3/recommendations')
-    ]);
+      }
+    );
 
     assistantMessage.value.state = 'completed';
-    chatBotInput.value.sendEnd();
+
+    const recommendationsResponse = await axiosInstance.get('/chat/3/recommendations');
+
     recommendations.value = recommendationsResponse.data.recommendations;
+
+    chatBotInput.value.sendEnd();
   } catch (error) {
     console.error('Error sending message:', error);
   }
