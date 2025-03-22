@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import ChatBotOutput from './ChatBotOutput.vue';
 import ChatBotInput from './ChatBotInput.vue';
 import { axiosInstance } from '../../services/http';
@@ -18,27 +18,34 @@ import { type ChatBotMessageModel } from './ChatBotMessage.vue';
 import ScrollableContainer from './ScrollableContainer.vue';
 import { fetchStreamResponse } from '../../services/streamService';
 
+const props = defineProps<{ conversation: { id: number } | null }>();
 const messages = ref<ChatBotMessageModel[]>([]);
 const recommendations = ref<string[]>([]);
 const chatContainer = ref();
-const loading = ref(true);
+const loading = ref(false);
 const chatBotInput = ref();
 
 // 加载聊天对话
 const loadMessages = async () => {
+  if (!props.conversation || !props.conversation.id) return;
+
+  loading.value = true;
   try {
-    const response = await axiosInstance.get('/chat/4/messages');
+    const response = await axiosInstance.get(`/chat/conversations/${props.conversation.id}/messages/`);
     messages.value = response.data.messages;
     await nextTick();
     chatContainer.value.scrollToBottom();
-    loading.value = false;
   } catch (error) {
     console.error('Error fetching messages:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
 // 发送消息和接收回答
 const sendMessage = async (messageContent: string) => {
+  if (!props.conversation || !props.conversation.id) return;
+
   recommendations.value = [];
   const userMessage = { role: 'user', content: messageContent };
   const assistantMessage = ref<ChatBotMessageModel>({ role: 'assistant', content: '', state: 'loading' });
@@ -49,11 +56,11 @@ const sendMessage = async (messageContent: string) => {
 
   try {
     // 发送提问内容
-    await axiosInstance.post('/chat/4/ask', JSON.stringify(userMessage));
+    await axiosInstance.post(`/chat/conversations/${props.conversation.id}/ask/`, JSON.stringify(userMessage));
 
     // 接收流式回答
     await fetchStreamResponse(
-      `${axiosInstance.defaults.baseURL}/chat/4/answer`,
+      `${axiosInstance.defaults.baseURL}/chat/conversations/${props.conversation.id}/answer/`,
       {
         method: 'GET',
         onChunkReceived: (chunk) => {
@@ -67,7 +74,7 @@ const sendMessage = async (messageContent: string) => {
     assistantMessage.value.state = 'completed';
 
     // 获取推荐问题
-    const recommendationsResponse = await axiosInstance.get('/chat/4/recommendations');
+    const recommendationsResponse = await axiosInstance.get(`/chat/conversations/${props.conversation.id}/recommendations/`);
     recommendations.value = recommendationsResponse.data.recommendations;
 
     chatBotInput.value.sendEnd();
@@ -81,8 +88,17 @@ const handleRecommendationClick = async (recommendation: string) => {
   chatBotInput.value.sendBegin(recommendation);
 };
 
-onMounted(loadMessages);
-
+// 当切换会话时
+watch(
+  () => props.conversation?.id,
+  async (newId, oldId) => {
+    if (newId !== oldId) {
+      recommendations.value = [];
+      await loadMessages();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped></style>
