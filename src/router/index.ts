@@ -23,6 +23,11 @@ const router = createRouter({
       name: 'chatbot',
       component: ChatBotView,
     },
+    {
+      path: '/exercise',
+      name: 'exercise',
+      component: () => import('../views/ExerciseView.vue'),
+    },
   ],
 })
 
