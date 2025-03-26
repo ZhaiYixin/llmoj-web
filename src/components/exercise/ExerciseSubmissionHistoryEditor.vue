@@ -3,20 +3,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
-import { cTemplate, cKeywords } from './languages/c';
-import { cppTemplate, cppKeywords } from './languages/cpp';
-import { javaTemplate, javaKeywords } from './languages/java';
-import { python2Template, python3Template, pythonKeywords } from './languages/python';
-import { goTemplate, goKeywords } from './languages/go';
-import { phpTemplate, phpKeywords } from './languages/php';
-import { javascriptTemplate, javascriptKeywords } from './languages/javascript';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { cKeywords } from './languages/c';
+import { cppKeywords } from './languages/cpp';
+import { javaKeywords } from './languages/java';
+import { pythonKeywords } from './languages/python';
+import { goKeywords } from './languages/go';
+import { phpKeywords } from './languages/php';
+import { javascriptKeywords } from './languages/javascript';
 
 const props = defineProps({
   language: {
     type: String,
     default: 'C',
   },
+  editorValue: {
+    type: String,
+    default: '',
+  }
 });
 
 const editorContainer = ref<HTMLDivElement | null>(null);
@@ -33,20 +37,6 @@ const languageMap: Record<string, string> = {
   PHP: 'php',
   JavaScript: 'javascript',
 };
-
-// 各语言对应的默认模板
-const languageTemplates: Record<string, string> = {
-  C: cTemplate,
-  'C++': cppTemplate,
-  Java: javaTemplate,
-  Python2: python2Template,
-  Python3: python3Template,
-  Go: goTemplate,
-  PHP: phpTemplate,
-  JavaScript: javascriptTemplate,
-};
-
-const editorValue = ref(languageTemplates[props.language]);
 
 // 各语法对应的常见单词和短语
 const languageKeywords: Record<string, string[]> = {
@@ -82,7 +72,7 @@ onMounted(async () => {
 
     // 配置编辑器
     editor = monaco.editor.create(editorContainer.value, {
-      value: editorValue.value, // 代码内容
+      value: props.editorValue, // 代码内容
       language: languageMap[props.language], // 编程语言
       theme: 'vs-light', // 主题，可选 'vs', 'vs-dark', 'hc-black'
       automaticLayout: true, // 自动调整布局
@@ -99,29 +89,11 @@ onMounted(async () => {
       padding: {
         bottom: 100, // 限制滚动超出最后一行的距离（单位：像素）
       },
+      readOnly: true,
     });
 
     // 自动补全关键字
     await registerCompletionProvider(languageMap[props.language]);
-
-    // 监听编辑器内容变化
-    editor.onDidChangeModelContent(() => {
-      editorValue.value = editor?.getValue() || '';
-    });
-  }
-});
-
-watch(() => props.language, async (newLanguage, oldLanguage) => {
-  if (editor && editor.getModel()) {
-    const monaco = await import('monaco-editor'); // 动态导入
-    // 切换默认模板
-    if (editor.getValue() == languageTemplates[oldLanguage]) {
-      editor.setValue(languageTemplates[newLanguage]);
-    }
-
-    // 切换语言
-    monaco.editor.setModelLanguage(editor.getModel()!, languageMap[newLanguage]);
-    await registerCompletionProvider(languageMap[newLanguage]);
   }
 });
 
@@ -129,14 +101,6 @@ onBeforeUnmount(() => {
   if (editor) {
     editor.dispose();
   }
-});
-
-defineExpose({
-  getEditorValue: () => editorValue.value,
-  setEditorValue: (newValue: string) => {
-    editorValue.value = newValue;
-    editor?.setValue(newValue);
-  },
 });
 </script>
 
