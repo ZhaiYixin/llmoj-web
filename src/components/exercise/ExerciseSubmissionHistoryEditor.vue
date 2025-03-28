@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { cKeywords } from './languages/c';
 import { cppKeywords } from './languages/cpp';
 import { javaKeywords } from './languages/java';
@@ -15,7 +15,7 @@ import { javascriptKeywords } from './languages/javascript';
 const props = defineProps({
   language: {
     type: String,
-    default: 'C',
+    default: 'plaintext',
   },
   editorValue: {
     type: String,
@@ -36,6 +36,7 @@ const languageMap: Record<string, string> = {
   Go: 'go',
   PHP: 'php',
   JavaScript: 'javascript',
+  plaintext: 'plaintext',
 };
 
 // 各语法对应的常见单词和短语
@@ -47,6 +48,7 @@ const languageKeywords: Record<string, string[]> = {
   go: goKeywords,
   php: phpKeywords,
   // javascript: javascriptKeywords, // Monaco编辑器已内置语言支持
+  plaintext: [],
 };
 
 // 注册自动补全的关键字
@@ -73,7 +75,7 @@ onMounted(async () => {
     // 配置编辑器
     editor = monaco.editor.create(editorContainer.value, {
       value: props.editorValue, // 代码内容
-      language: languageMap[props.language], // 编程语言
+      language: languageMap[props.language] || 'plaintext',
       theme: 'vs-light', // 主题，可选 'vs', 'vs-dark', 'hc-black'
       automaticLayout: true, // 自动调整布局
       wordWrap: 'on', // 自动换行
@@ -93,9 +95,25 @@ onMounted(async () => {
     });
 
     // 自动补全关键字
-    await registerCompletionProvider(languageMap[props.language]);
+    await registerCompletionProvider(languageMap[props.language] || 'plaintext');
   }
 });
+
+watch(() => props.language, async (newLanguage) => {
+  if (editor && editor.getModel()) {
+    const monaco = await import('monaco-editor'); // 动态导入
+    // 切换语言
+    monaco.editor.setModelLanguage(editor.getModel()!, languageMap[newLanguage]);
+    await registerCompletionProvider(languageMap[newLanguage]);
+  }
+});
+
+watch(
+  () => props.editorValue,
+  (newValue) => {
+    editor?.setValue(newValue);
+  }
+);
 
 onBeforeUnmount(() => {
   if (editor) {

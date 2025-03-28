@@ -21,32 +21,42 @@ import { onMounted, ref } from 'vue';
 import { axiosInstance } from '@/services/http';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
-const problem_id = ref(1)
+const props = defineProps<{
+  problemId: string | null;
+}>();
+
+const emit = defineEmits(['update:problem-id']);
+
 const title = ref('')
 const description = ref('')
 
+const updateProblem = (id: string) => {
+  emit('update:problem-id', id);
+  updateContent(id);
+};
+
 const goToPrevious = () => {
-  if (problem_id.value > 1) {
-    problem_id.value--;
-    updateContent();
+  if (props.problemId && Number(props.problemId) > 1) {
+    updateProblem(String(Number(props.problemId) - 1));
   }
 };
 
 const goToNext = () => {
-  if (problem_id.value < 2) {
-    problem_id.value++;
-    updateContent();
+  if (props.problemId && Number(props.problemId) < 2) {
+    updateProblem(String(Number(props.problemId) + 1));
   }
 };
 
-const updateContent = async () => {
-  const response = await axiosInstance.get(`/judge/problems/?problem_id=${problem_id.value}`);
-  title.value = response.data[0].title;
-  description.value = response.data[0].description;
+const updateContent = async (id: string | null) => {
+  if (id) {
+    const response = await axiosInstance.get(`/judge/problems/?problem_id=${id}`);
+    title.value = response.data[0].title;
+    description.value = response.data[0].description;
+  }
 };
 
 onMounted(() => {
-  updateContent();
+  updateContent(props.problemId);
 })
 </script>
 
