@@ -52,52 +52,55 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { FolderChecked } from '@element-plus/icons-vue';
 import CodeIcon from '../icons/IconCode.vue'
 import CheckListIcon from '../icons/IconCheckList.vue'
 import TerminalIcon from '../icons/IconTerminal.vue'
 import QuestionIcon from '../icons/IconQuestion.vue'
-import ExerciseSubmissionCode from './ExerciseSubmissionCode.vue';
-import ExerciseSubmissionTest from './ExerciseSubmissionTest.vue';
-import ExerciseSubmissionTerminal from './ExerciseSubmissionTerminal.vue';
-import ExerciseSubmissionHistory from './ExerciseSubmissionHistory.vue';
+import ExerciseSubmissionCode from './ExerciseSubmission/ExerciseSubmissionCode.vue';
+import ExerciseSubmissionTest from './ExerciseSubmission/ExerciseSubmissionTest.vue';
+import ExerciseSubmissionTerminal from './ExerciseSubmission/ExerciseSubmissionTerminal.vue';
+import ExerciseSubmissionHistory from './ExerciseSubmission/ExerciseSubmissionHistory.vue';
+import type { ExerciseSubmissionCodeInstance } from './ExerciseSubmission/ExerciseSubmissionCode.vue';
+import type { ExerciseSubmissionTestInstance } from './ExerciseSubmission/ExerciseSubmissionTest.vue';
+import type { ExerciseSubmissionTerminalInstance } from './ExerciseSubmission/ExerciseSubmissionTerminal.vue';
+import type { ExerciseSubmissionHistoryInstance } from './ExerciseSubmission/ExerciseSubmissionHistory.vue';
+import type { Submission, TestCase, TestCaseResult } from '@/types/judge';
 
 const props = defineProps<{
-  problemId: string | null;
+  problemId: string | undefined;
 }>();
 
 const activeTab = ref('code')
-const codeRef = ref(null);
-const testRef = ref(null);
-const terminalRef = ref(null);
-const historyRef = ref(null);
+const codeRef = ref<ExerciseSubmissionCodeInstance>();
+const testRef = ref<ExerciseSubmissionTestInstance>();
+const terminalRef = ref<ExerciseSubmissionTerminalInstance>();
+const historyRef = ref<ExerciseSubmissionHistoryInstance>();
 
 const handleSubmitted = () => {
   activeTab.value = 'test';
-  testRef.value.show(codeRef.value.getSubmissionId())
-  historyRef.value.load()
+  testRef.value?.show(codeRef.value?.getSubmissionId());
+  historyRef.value?.load()
 }
 
-const handleTestCaseClicked = (input: string, output: string) => {
+const handleTestCaseClicked = (testCase: TestCase) => {
   activeTab.value = 'terminal';
-  terminalRef.value?.setInput(input);
-  terminalRef.value?.setOutput(output);
+  terminalRef.value?.showTestCase(testCase);
 }
 
-const handleTestCaseResultClicked = async (input: string, output: string, src: string, lang: string) => {
+const handleTestCaseResultClicked = (testCase: TestCase, submission: Submission, testCaseResult: TestCaseResult) => {
   activeTab.value = 'terminal';
-  terminalRef.value?.setInput(input);
-  await terminalRef.value?.run(src, lang, output);
+  terminalRef.value?.showTestCaseResult(testCase, submission, testCaseResult);
 }
 
 const handleTerminalRunBtnClicked = () => {
-  terminalRef.value?.run(codeRef.value.getEditorValue(), codeRef.value.getLanguage());
+  terminalRef.value?.run(codeRef.value?.getEditorValue() as string, codeRef.value?.getLanguage() as string);
 }
 
 const handleHistoryDetailBtnClicked = (submissionId: string) => {
   activeTab.value = 'test';
-  testRef.value.show(submissionId)
+  testRef.value?.show(submissionId);
 }
 </script>
 

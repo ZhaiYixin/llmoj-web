@@ -5,67 +5,42 @@
         <el-option v-for="item in submissions" :key="item.id" :label="formatDate(item.created_at)" :value="item" />
       </el-select>
       <el-tooltip content="点击按钮查看详情">
-        <div>
-          <el-button v-if="state == 'correct'" type="primary" :icon="SuccessFilled"
-            @click="handleDetailBtnClicked">通过</el-button>
-          <el-button v-if="state == 'part'" type="info" :icon="WarnTriangleFilled"
-            @click="handleDetailBtnClicked">部分通过</el-button>
-          <el-button v-if="state == 'wrong'" type="info" :icon="WarnTriangleFilled"
-            @click="handleDetailBtnClicked">不通过</el-button>
-          <el-button v-if="state == 'error'" type="info" :icon="WarnTriangleFilled"
-            @click="handleDetailBtnClicked">编译失败</el-button>
-        </div>
+        <el-button v-if="state == 'correct'" @click="handleDetailBtnClicked" type="primary"
+          :icon="SuccessFilled">通过</el-button>
+        <el-button v-else-if="state == 'part'" @click="handleDetailBtnClicked" type="info"
+          :icon="WarnTriangleFilled">部分通过</el-button>
+        <el-button v-else-if="state == 'wrong'" @click="handleDetailBtnClicked" type="info"
+          :icon="WarnTriangleFilled">不通过</el-button>
+        <el-button v-else-if="state == 'error'" @click="handleDetailBtnClicked" type="info"
+          :icon="WarnTriangleFilled">编译失败</el-button>
+        <div v-else />
       </el-tooltip>
     </div>
-    <ExerciseSubmissionHistoryEditor v-if="submissions.length" class="editor"
-      :language="selectedSubmission?.lang || 'plaintext'" :editor-value="selectedSubmission?.src || ''" />
+    <CodeEditor class="editor" v-if="selectedSubmission" :language="selectedSubmission.lang"
+      v-model="selectedSubmission.src" readonly />
     <el-empty v-else description="暂无提交" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { SuccessFilled, WarnTriangleFilled } from '@element-plus/icons-vue';
-import ExerciseSubmissionHistoryEditor from './ExerciseSubmissionHistoryEditor.vue';
 import { axiosInstance } from '@/services/http';
-
-export type TestCaseResult = {
-  id: number;
-  submission: number;
-  test_case: number;
-  cpu_time: number;
-  result: number;
-  memory: number;
-  real_time: number;
-  exit_code: number;
-  error: number;
-  output: string;
-};
-
-export type Submission = {
-  id: number;
-  user: number;
-  problem: number;
-  src: string;
-  lang: string;
-  err: string | null;
-  error_reason: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import { SuccessFilled, WarnTriangleFilled } from '@element-plus/icons-vue';
+import CodeEditor from './CodeEditor.vue';
+import type { Submission, TestCaseResult } from '@/types/judge'
 
 const props = defineProps<{
-  problemId: string | null;
+  problemId?: string;
 }>();
 
 const emit = defineEmits<{
   (event: 'detail-btn-clicked', submissionId: string): void;
 }>();
 
-const submissions = ref<Array<Submission>>([]);
-const selectedSubmission = ref<Submission | null>(null);
-const testCaseResults = ref<Array<TestCaseResult> | null>(null);
-const state = ref<string | null>(null)
+const submissions = ref<Array<Submission>>();
+const selectedSubmission = ref<Submission>();
+const testCaseResults = ref<Array<TestCaseResult>>();
+const state = ref<string>();
 
 const formatDate = (isoDate: string): string => {
   const date = new Date(isoDate);
@@ -90,25 +65,25 @@ const loadSubmissions = async () => {
   submissions.value = response.data;
 };
 
+const load = async () => {
+  await loadSubmissions();
+  if (submissions.value?.length) {
+    selectedSubmission.value = submissions.value[0];
+  }
+}
+
 const loadTestCaseResults = async (submission_id: number) => {
   const url = `/judge/problems/${props.problemId}/results/?submission_id=${submission_id}`;
   const response = await axiosInstance.get(url);
   testCaseResults.value = response.data;
 };
 
-const load = async () => {
-  await loadSubmissions();
-  if (submissions.value.length) {
-    selectedSubmission.value = submissions.value[0];
-  }
-}
-
-watch(selectedSubmission, async (newSubmission: Submission | null) => {
-  if (newSubmission) {
-    if (newSubmission.err) {
+const showResultState = async (submission?: Submission) => {
+  if (submission) {
+    if (submission.err) {
       state.value = 'error';
     } else {
-      await loadTestCaseResults(newSubmission.id);
+      await loadTestCaseResults(submission.id);
       if (testCaseResults.value) {
         const allPassed = testCaseResults.value.every(result => result.result === 0);
         const anyPassed = testCaseResults.value.some(result => result.result === 0);
@@ -120,12 +95,16 @@ watch(selectedSubmission, async (newSubmission: Submission | null) => {
           state.value = 'wrong';
         }
       } else {
-        state.value = null;
+        state.value = undefined;
       }
     }
   } else {
-    state.value = null;
+    state.value = undefined;
   }
+}
+
+watch(selectedSubmission, async (newSubmission?: Submission) => {
+  showResultState(newSubmission);
 });
 
 onMounted(() => {
@@ -133,6 +112,10 @@ onMounted(() => {
 });
 
 defineExpose({ load });
+
+export interface ExerciseSubmissionHistoryInstance {
+  load: () => Promise<void>;
+}
 </script>
 
 <style scoped>

@@ -19,49 +19,20 @@
 </template>
 
 <script setup lang="ts">
-import { axiosInstance } from '@/services/http';
-import { ref, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { Check, Close } from '@element-plus/icons-vue';
+import { axiosInstance } from '@/services/http';
+import { ResultCode } from '@/types/judge';
+import type { TestCase, TestCaseResult, Submission } from '@/types/judge';
 
 const props = defineProps<{
-  problemId: string | null;
+  problemId: string | undefined;
 }>();
 
 const emit = defineEmits<{
-  (event: 'testcase-clicked', input: string, output: string): void;
-  (event: 'result-clicked', input: string, output: string, src: string, lang: string): void;
+  (event: 'testcase-clicked', testCase: TestCase): void;
+  (event: 'result-clicked', testCase: TestCase, submission: Submission, testCaseResult: TestCaseResult): void;
 }>();
-
-export type TestCase = {
-  id: number;
-  ordinal: number;
-  title: string;
-  input: string;
-  output: string;
-};
-
-export type TestCaseResult = {
-  id: number;
-  submission: number;
-  test_case: number;
-  cpu_time: number;
-  result: number;
-  memory: number;
-  real_time: number;
-  exit_code: number;
-  error: number;
-  output: string;
-};
-
-enum ResultCode {
-  WRONG_ANSWER = -1,
-  SUCCESS = 0,
-  CPU_TIME_LIMIT_EXCEEDED = 1,
-  REAL_TIME_LIMIT_EXCEEDED = 2,
-  MEMORY_LIMIT_EXCEEDED = 3,
-  RUNTIME_ERROR = 4,
-  SYSTEM_ERROR = 5,
-}
 
 type TableRow = {
   id: number;
@@ -73,21 +44,23 @@ type TableRow = {
   correct?: boolean;
 };
 
-const testCases = ref<Array<TestCase>>([]);
 const tableData = ref<Array<TableRow>>([])
-const submission = ref<{ src: string, lang: string, err: string, error_reason: string } | null>(null);
-const testCaseResults = ref<Array<TestCaseResult>>([]);
 const showMode = ref('testCases')
+const testCases = ref<Array<TestCase>>([]);
+const submission = ref<Submission>();
+const testCaseResults = ref<Array<TestCaseResult>>([]);
 
 const tableRowClass = ({ row }: { row: TableRow }) => {
   return row.correct === false ? 'row-wrong' : 'row-default';
 };
 
 const handleRowClick = (row: TableRow) => {
+  const testCase = testCases.value.find(tc => tc.id === row.id);
   if (showMode.value == 'testCases') {
-    emit('testcase-clicked', row.input, row.output);
+    emit('testcase-clicked', testCase as TestCase);
   } else if (showMode.value == 'testCaseResults') {
-    emit('result-clicked', row.input, row.output, submission.value!.src, submission.value!.lang);
+    const testCaseResult = testCaseResults.value.find(result => result.test_case === row.id);
+    emit('result-clicked', testCase as TestCase, submission.value as Submission, testCaseResult as TestCaseResult);
   }
 };
 
@@ -98,16 +71,16 @@ const loadTestCases = async () => {
   }
 };
 
-const loadSubmission = async (submissionId: string | null = null) => {
-  const url = `/judge/problems/${props.problemId}/submissions/?${submissionId ? `submission_id=${submissionId}` : ''}`;
+const loadSubmission = async (submissionId: string) => {
+  const url = `/judge/problems/${props.problemId}/submissions/?submission_id=${submissionId}`;
   const response = await axiosInstance.get(url);
   if (response.data?.length > 0) {
     submission.value = response.data[0];
   }
 };
 
-const loadTestCaseResults = async (submission_id: string) => {
-  const response = await axiosInstance.get(`/judge/problems/${props.problemId}/results/?submission_id=${submission_id}`);
+const loadTestCaseResults = async (submissionId: string) => {
+  const response = await axiosInstance.get(`/judge/problems/${props.problemId}/results/?submission_id=${submissionId}`);
   if (response.data?.length > 0) {
     testCaseResults.value = response.data;
   }
@@ -167,7 +140,7 @@ const showError = () => {
   showMode.value = 'testCaseResults';
 };
 
-const show = async (submissionId: string | null) => {
+const show = async (submissionId?: string) => {
   if (submissionId) {
     await loadSubmission(submissionId);
     if (submission.value?.err) {
@@ -182,14 +155,19 @@ const show = async (submissionId: string | null) => {
   }
 }
 
-onMounted(async () => {
-  await loadTestCases();
-  showTestCases();
-});
+watch(() => props.problemId, async () => {
+  if (props.problemId) {
+    show();
+  }
+}, { immediate: true });
 
 defineExpose({
-  show
+  show,
 });
+
+export type ExerciseSubmissionTestInstance = {
+  show: (submissionId?: string) => Promise<void>;
+};
 </script>
 
 <style scoped>
