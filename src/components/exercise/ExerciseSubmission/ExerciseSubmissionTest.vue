@@ -68,6 +68,8 @@ const loadTestCases = async () => {
   const response = await axiosInstance.get(`/judge/problems/${props.problemId}/testcases/`);
   if (response.data?.length > 0) {
     testCases.value = response.data;
+  } else {
+    testCases.value = [];
   }
 };
 

@@ -39,7 +39,7 @@ const languages = [
 const isSubmitting = ref(false);
 const editorRef = ref<ExerciseSubmissionCodeEditorInstance>()
 const language = ref<string>(languages[0].value);
-const submissionId = ref<string>();
+const submissionId = ref<string | null>();
 
 const handleSubmitBtnClicked = async () => {
   isSubmitting.value = true;
@@ -61,6 +61,9 @@ const loadSubmission = async () => {
     submissionId.value = String(submission.id);
     language.value = submission.lang;
     editorRef.value?.setEditorValue(submission.src);
+  } else {
+    submissionId.value = null;
+    editorRef.value?.startWithTemplate();
   }
 };
 
@@ -84,7 +87,7 @@ defineExpose({
 });
 
 export type ExerciseSubmissionCodeInstance = {
-  getSubmissionId: () => string | undefined;
+  getSubmissionId: () => string | null | undefined;
   getEditorValue: () => string | undefined;
   getLanguage: () => string | undefined;
 };

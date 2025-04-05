@@ -14,7 +14,10 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.8.3",
+    "dayjs": "^1.11.13",
     "element-plus": "^2.9.6",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.7",
@@ -24,6 +27,7 @@
     "pinia": "^3.0.1",
     "vite-plugin-monaco-editor": "^1.1.0",
     "vue": "^3.5.13",
+    "vue-draggable-next": "^2.2.1",
     "vue-router": "^4.5.0"
   },
   "devDependencies": {

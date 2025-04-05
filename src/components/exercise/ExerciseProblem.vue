@@ -1,73 +1,119 @@
 <template>
   <div class="exercise-problem">
     <div class="header">
-      <el-text truncated size="large" tag="b">{{ title }}</el-text>
-      <el-button-group>
-        <el-button text :icon="ArrowLeft" @click="goToPrevious">上一题</el-button>
-        <el-button text>{{ "1 / 5" }}</el-button>
-        <el-button text @click="goToNext">下一题<el-icon class="el-icon--right">
+      <el-text truncated class="title" size="large">{{ title }}</el-text>
+      <div v-if="problemList.length">
+        <el-button text :icon="ArrowLeft" @click="problemIndex--">上一题</el-button>
+        <el-dropdown :tabindex="-1">
+          <el-button text>{{ problemIndex + 1 }} / {{ problemList.length }}</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="(p, index) in problemList" :key="p.id" @click="problemIndex = index"
+                :disabled="index == problemIndex">
+                {{ p.title }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button text @click="problemIndex++">
+          下一题
+          <el-icon class="el-icon--right">
             <ArrowRight />
-          </el-icon></el-button>
-      </el-button-group>
+          </el-icon>
+        </el-button>
+      </div>
     </div>
-    <div class="description">
-      <p>{{ description }}</p>
-    </div>
+    <TextEditor class="description" v-model="description" :readonly="true" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { axiosInstance } from '@/services/http';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import TextEditor from '../teacher/exercise/TextEditor.vue';
 
 const props = defineProps<{
-  problemId: string | null;
+  problemId?: string;
+  problemListId?: string;
 }>();
 
 const emit = defineEmits(['update:problem-id']);
 
-const title = ref('')
-const description = ref('')
+const title = ref('');
+const description = ref('');
+const problemList = ref([]);
 
-const updateProblem = (id: string) => {
-  emit('update:problem-id', id);
-  updateContent(id);
-};
-
-const goToPrevious = () => {
-  if (props.problemId && Number(props.problemId) > 1) {
-    updateProblem(String(Number(props.problemId) - 1));
+const problemIndex = computed({
+  get: () => {
+    return problemList.value.findIndex(p => p.id == props.problemId);
+  },
+  set: (newIndex) => {
+    if (newIndex >= 0 && newIndex < problemList.value.length) {
+      emit('update:problem-id', problemList.value[newIndex].id);
+    }
   }
-};
+});
 
-const goToNext = () => {
-  if (props.problemId && Number(props.problemId) < 2) {
-    updateProblem(String(Number(props.problemId) + 1));
-  }
-};
-
-const updateContent = async (id: string | null) => {
-  if (id) {
+const loadProblem = async (id: string) => {
+  const p = problemList.value.find(p => p.id == id);
+  if (p) {
+    title.value = p.title;
+    description.value = p.description;
+  } else {
     const response = await axiosInstance.get(`/judge/problems/?problem_id=${id}`);
     title.value = response.data[0].title;
     description.value = response.data[0].description;
   }
-};
+}
 
-onMounted(() => {
-  updateContent(props.problemId);
-})
+const loadProblemList = async (id: string) => {
+  const url = `/design/problem-lists/${id}/`;
+  const response = await axiosInstance.get(url);
+  problemList.value = response.data.items.map((p) => ({
+    id: String(p.problem.id),
+    title: p.problem.title,
+    description: p.problem.description,
+  }));
+  if (problemList.value.length > 0 && problemIndex.value == -1) {
+    problemIndex.value = 0;
+  }
+}
+
+watch(() => props.problemId, () => {
+  if (props.problemId)
+    loadProblem(props.problemId);
+}, { immediate: true });
+
+watch(() => props.problemListId, () => {
+  if (props.problemListId)
+    loadProblemList(props.problemListId);
+}, { immediate: true });
 </script>
 
 <style scoped>
 .exercise-problem {
+  height: 100%;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
   border-bottom: 1px solid var(--el-border-color);
   display: flex;
   justify-content: space-between;
+}
+
+.title {
+  flex: 1;
+  font: bold;
+  font-size: large;
+}
+
+.description {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 </style>

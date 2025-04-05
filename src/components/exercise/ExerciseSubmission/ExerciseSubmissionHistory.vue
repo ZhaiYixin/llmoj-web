@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { axiosInstance } from '@/services/http';
 import { SuccessFilled, WarnTriangleFilled } from '@element-plus/icons-vue';
 import CodeEditor from './CodeEditor.vue';
@@ -69,6 +69,8 @@ const load = async () => {
   await loadSubmissions();
   if (submissions.value?.length) {
     selectedSubmission.value = submissions.value[0];
+  } else {
+    selectedSubmission.value = undefined;
   }
 }
 
@@ -107,9 +109,11 @@ watch(selectedSubmission, async (newSubmission?: Submission) => {
   showResultState(newSubmission);
 });
 
-onMounted(() => {
-  load();
-});
+watch(() => props.problemId, () => {
+  if (props.problemId) {
+    load();
+  }
+}, { immediate: true });
 
 defineExpose({ load });
 
