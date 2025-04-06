@@ -8,25 +8,18 @@
           <el-option key="designed_by_me" label="只看我的" value="designed_by_me" />
           <el-option key="private" label="只看我私密的" value="private" />
         </el-select>
-        <el-input class="search-input" v-model="searchInput" @change="load" :prefix-icon="Search" placeholder="搜索题目集"
+        <el-input class="search-input" v-model="searchInput" @change="load" :prefix-icon="Search" placeholder="搜索题目"
           size="large" />
       </div>
       <el-button @click="handlePlusButtonClick" :icon="Plus">新建</el-button>
     </div>
-    <el-table class="table" :data="tableData" @row-click="handleTableRowClick" row-class-name="table-row">
-      <el-table-column type="expand">
-        <template #default="scope">
-          <el-table :data="scope.row.problems" :border="true">
-            <el-table-column prop="title" label="题目" show-overflow-tooltip />
-            <el-table-column prop="description" label="描述" show-overflow-tooltip />
-            <el-table-column prop="updatedAt" label="修改于" show-overflow-tooltip />
-          </el-table>
-        </template>
-      </el-table-column>
-      <el-table-column prop="title" label="题目集" show-overflow-tooltip />
+    <el-table class="table" ref="tableRef" :data="tableData" @row-click="handleTableRowClick"
+      @selection-change="handleTableSelectionChange" row-class-name="table-row">
+      <el-table-column v-if="props.selectable" type="selection" width="55" />
+      <el-table-column v-else width="55" />
+      <el-table-column prop="title" label="题目" show-overflow-tooltip />
       <el-table-column prop="description" label="描述" show-overflow-tooltip />
-      <el-table-column prop="itemCount" label="题目数量" />
-      <el-table-column prop="designer" label="组题人" show-overflow-tooltip />
+      <el-table-column prop="designer" label="出题人" show-overflow-tooltip />
       <el-table-column prop="updatedAt" label="修改于" show-overflow-tooltip />
     </el-table>
     <div class="pagination-wrapper">
@@ -38,30 +31,44 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import { Search, Plus } from '@element-plus/icons-vue';
 import { axiosInstance } from '@/services/http';
 import dayjs from 'dayjs';
+import type { TableInstance } from 'element-plus'
+
+const props = defineProps<{
+  selectable?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (event: 'plus-button-click'): void;
+  (event: 'row-click', row: any): void;
+  (event: 'selection-change', rows: Array<any>): void;
+}>();
 
 const pageSize = 30;
-const router = useRouter();
 
 const filterOptions = ref([])
 const searchInput = ref('')
 const currentPage = ref(1);
 const total = ref(0);
 const tableData = ref<Array<any>>([]);
+const tableRef = ref<TableInstance>();
 
 const handlePlusButtonClick = () => {
-  router.push({ name: 'ProblemListCreate' });
+  emit('plus-button-click');
 }
 
 const handleTableRowClick = (row: any) => {
-  router.push({ name: 'ProblemListDetail', params: { id: row.id } });
+  emit('row-click', row);
 };
 
+const handleTableSelectionChange = (rows: any[]) => {
+  emit('selection-change', rows);
+}
+
 const load = async () => {
-  let url = `/design/problem-lists/?page_size=${pageSize}&page=${currentPage.value}`;
+  let url = `/design/problems/?page_size=${pageSize}&page=${currentPage.value}`;
   if (searchInput.value)
     url += `&search=${searchInput.value}`;
   for (const option of filterOptions.value) {
@@ -71,28 +78,25 @@ const load = async () => {
   const response = await axiosInstance.get(url);
 
   total.value = response.data.count;
-  tableData.value = response.data.results.map((ls: any) => ({
-    id: ls.problem_list.id,
-    title: ls.problem_list.title,
-    description: ls.problem_list.description,
-    designer: ls.problem_list.designer.full_name,
-    updatedAt: dayjs(ls.problem_list.updated_at).format('YYYY-MM-DD'),
-    itemCount: ls.items.length,
-    problems: ls.items.map((p: any) => {
-      return p.problem ? {
-        title: p.problem.title,
-        description: p.problem.description,
-        updatedAt: dayjs(p.problem.updated_at).format('YYYY-MM-DD'),
-      } : {
-        title: '题目已删除',
-      };
-    }),
-  }));
+  tableData.value = response.data.results.map((p: any) => {
+    return {
+      id: String(p.problem.id),
+      title: p.problem.title,
+      description: p.problem.description,
+      designer: p.design ? p.design.designer.full_name : '',
+      updatedAt: dayjs(p.problem.updated_at).format('YYYY-MM-DD'),
+    };
+  });
 }
 
 watch(currentPage, async () => {
   load();
 }, { immediate: true })
+
+defineExpose({
+  getSelectionRows: () => { return tableRef.value?.getSelectionRows(); },
+  clearSelection: () => { tableRef.value?.clearSelection(); },
+});
 </script>
 
 <style scoped>

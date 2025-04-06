@@ -31,7 +31,7 @@
 import { computed, ref, watch } from 'vue';
 import { axiosInstance } from '@/services/http';
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
-import TextEditor from '../teacher/exercise/TextEditor.vue';
+import TextEditor from '../teacher/design/TextEditor.vue';
 
 const props = defineProps<{
   problemId?: string;
@@ -70,7 +70,7 @@ const loadProblem = async (id: string) => {
 const loadProblemList = async (id: string) => {
   const url = `/design/problem-lists/${id}/`;
   const response = await axiosInstance.get(url);
-  problemList.value = response.data.items.map((p) => ({
+  problemList.value = response.data.items.filter((p) => p.problem).map((p) => ({
     id: String(p.problem.id),
     title: p.problem.title,
     description: p.problem.description,

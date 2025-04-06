@@ -8,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
-import TextEditor from './TextEditor.vue';
+import { computed } from 'vue';
+import TextEditor from '@/components/teacher/design/TextEditor.vue';
 
 const props = defineProps<{
   problem?: any;
@@ -17,20 +17,11 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:problem']);
 
-const form = reactive({
-  title: '',
-  description: '',
-});
-
-watch(() => props.problem, () => {
-  if (props.problem) {
-    form.title = props.problem.title;
-    form.description = props.problem.description;
-  }
-}, { immediate: true });
-
-watch(form, () => {
-  emit('update:problem', form);
+const form = computed({
+  get: () => props.problem,
+  set: (newVal) => {
+    emit('update:problem', newVal);
+  },
 });
 
 </script>

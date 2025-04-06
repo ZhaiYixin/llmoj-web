@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps<{
   design?: any;
@@ -18,19 +18,12 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:design']);
 
-const form = reactive({
-  is_public: false,
+const form = computed({
+  get: () => props.design,
+  set: (newVal) => {
+    emit('update:design', newVal);
+  },
 });
-
-watch(() => props.design, () => {
-  if (props.design) {
-    form.is_public = props.design.is_public;
-  }
-}, { immediate: true });
-
-watch(form, () => {
-  emit("update:design", form);
-})
 </script>
 
 <style scoped></style>

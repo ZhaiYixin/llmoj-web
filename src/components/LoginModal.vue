@@ -22,6 +22,9 @@ import { reactive, ref, onMounted, onUnmounted } from 'vue';
 import { axiosInstance } from '@/services/http';
 import { ElMessage } from 'element-plus';
 import eventBus from '@/services/eventBus';
+import { useUserStore } from '@/stores/user';
+
+const userStore = useUserStore();
 
 const visible = ref(false);
 const form = reactive({
@@ -68,6 +71,7 @@ const handleLogin = async () => {
     });
     const token = response.data.token;
     localStorage.setItem('token', token);
+    userStore.fetchInfo();
 
     if (loginPromiseResolve) {
       loginPromiseResolve();

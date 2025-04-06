@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ChatBotView from '../views/ChatBotView.vue'
-import ProblemListSearchPage from '../components/teacher/ProblemListSearchPage.vue'
-import ProblemListDetailView from '../views/teacher/ProblemListDetailView.vue'
+import AssignView from '../views/teacher/AssignView.vue'
+import DesignView from '../views/teacher/DesignView.vue'
+import DesignProblemView from '../views/teacher/design/DesignProblemView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,24 +13,24 @@ const router = createRouter({
       component: ChatBotView,
     },
     {
-      path: '/exercise',
+      path: '/exercise/:id',
       name: 'exercise',
       component: () => import('../views/ExerciseView.vue'),
     },
     {
-      path: '/problem-lists',
-      name: 'ProblemListSearch',
-      component: ProblemListSearchPage,
+      path: '/assign',
+      name: 'assign',
+      component: AssignView,
     },
     {
-      path: '/problem-lists/create',
-      name: 'ProblemListCreate',
-      component: ProblemListDetailView,
+      path: '/design',
+      name: 'design',
+      component: DesignView,
     },
     {
-      path: '/problem-lists/:id',
-      name: 'ProblemListDetail',
-      component: ProblemListDetailView,
+      path: '/problem',
+      name: 'problem',
+      component: DesignProblemView,
     },
   ],
 })
