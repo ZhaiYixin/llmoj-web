@@ -22,8 +22,7 @@
 import { ref, watch } from 'vue';
 import { Check, Close } from '@element-plus/icons-vue';
 import { axiosInstance } from '@/services/http';
-import { ResultCode } from '@/types/judge';
-import type { TestCase, TestCaseResult, Submission } from '@/types/judge';
+import type { TestCase, TestCaseResult, Submission, ErrType } from '@/types/judge';
 
 const props = defineProps<{
   problemId: string | undefined;
@@ -104,30 +103,27 @@ const showTestCases = () => {
 const showTestCaseResults = () => {
   tableData.value = testCases.value.map((testCase) => {
     const r = testCaseResults.value.find((x) => x.test_case === testCase.id);
+    const s = r?.status;
     return {
       id: testCase.id,
       ordinal: testCase.ordinal,
       title: testCase.title || `例${testCase.ordinal}`,
       input: testCase.input,
       output: testCase.output,
-      realOutput: r === null ? '系统错误' :
-        r === undefined ? '系统错误' :
-          r.exit_code ? '返回值非零' :
-            r.result === ResultCode.WRONG_ANSWER ? r.output || '空' :
-              r.result === ResultCode.SUCCESS ? r.output :
-                r.result === ResultCode.CPU_TIME_LIMIT_EXCEEDED ? '运行超时' :
-                  r.result === ResultCode.REAL_TIME_LIMIT_EXCEEDED ? '运行超时' :
-                    r.result === ResultCode.MEMORY_LIMIT_EXCEEDED ? '内存超限' :
-                      r.result === ResultCode.RUNTIME_ERROR ? '运行时错误' :
-                        r.result === ResultCode.SYSTEM_ERROR ? '系统错误' :
-                          '系统错误',
-      correct: r && r.result === ResultCode.SUCCESS,
+      realOutput:
+        s == 'Accepted' ? r!.output :
+          s == 'WrongAnswer' ? r!.output :
+            s == 'TimeLimitExceeded' ? '运行超时' :
+              s == 'MemoryLimitExceeded' ? '内存超限' :
+                s == 'RuntimeError' ? '运行错误' :
+                  s == 'SystemError' ? '后台错误' : '系统错误',
+      correct: s == 'Accepted',
     };
   });
   showMode.value = 'testCaseResults';
 };
 
-const showError = () => {
+const showError = (s?: ErrType) => {
   tableData.value = testCases.value.map((testCase) => {
     return {
       id: testCase.id,
@@ -135,7 +131,7 @@ const showError = () => {
       title: testCase.title || `例${testCase.ordinal}`,
       input: testCase.input,
       output: testCase.output,
-      realOutput: submission.value?.err || '',
+      realOutput: s == 'CompileError' ? '编译失败' : '系统错误',
       correct: false,
     };
   });
@@ -145,11 +141,12 @@ const showError = () => {
 const show = async (submissionId?: string) => {
   if (submissionId) {
     await loadSubmission(submissionId);
-    if (submission.value?.err) {
-      showError();
-    } else {
+    const s = submission.value?.status;
+    if (s == 'Accepted' || s == 'PartiallyAccepted' || s == 'WrongAnswer') {
       await loadTestCaseResults(submissionId);
       showTestCaseResults();
+    } else {
+      showError(s);
     }
   } else {
     await loadTestCases();

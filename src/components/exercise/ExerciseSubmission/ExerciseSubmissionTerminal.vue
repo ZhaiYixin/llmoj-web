@@ -19,8 +19,7 @@ import { ref } from 'vue';
 import { CaretRight } from '@element-plus/icons-vue';
 import { axiosInstance } from '@/services/http';
 import ExerciseSubmissionTerminalTextarea from './ExerciseSubmissionTerminalTextarea.vue';
-import { ResultCode, ErrorCode } from '@/types/judge';
-import type { RunResult, RunTestCaseResult, Submission, TestCase, TestCaseResult } from '@/types/judge';
+import type { RunResult, RunTestCaseResult, ErrType, Submission, TestCase, TestCaseResult } from '@/types/judge';
 
 
 const props = defineProps<{
@@ -55,84 +54,50 @@ const run = async (src: string, lang: string) => {
 
 const showRunResult = (result: RunResult) => {
   if (result.err) {
-    showRunError(result.err, result.data as string);
+    showRunResultError(result.err, result.data as string);
   } else {
-    const r = (result.data as Array<RunTestCaseResult>)[0];
-    showRunTestCaseResult(
-      r.result,
-      r.output,
-      undefined,
-      r.cpu_time,
-      r.real_time,
-      r.memory,
-      r.exit_code,
-      r.signal,
-      r.error
-    );
+    showRunTestCaseResult(result.data as RunTestCaseResult);
   }
 };
 
-const showRunError = (err: string, error_reason: string) => {
-  outputTitle.value = '编译失败！';
+const showRunResultError = (err: ErrType, error_reason: string) => {
+  outputTitle.value = err == 'CompileError' ? '编译失败！' : '系统错误！';
   output.value = error_reason;
   expectedOutput.value = undefined;
 }
 
-const showRunTestCaseResult = (
-  result: ResultCode,
-  realOutput: string,
-  testCaseOutput?: string,
-  cpu_time?: number,
-  real_time?: number,
-  memory?: number,
-  exit_code?: number,
-  signal?: number,
-  error?: ErrorCode,
-) => {
-  const resultHandlers: Record<ResultCode, () => void> = {
-    [ResultCode.SUCCESS]: () => {
+const showRunTestCaseResult = (r: RunTestCaseResult, testCaseOutput?: string) => {
+  if (r.status == 'Accepted') {
+    outputTitle.value = undefined;
+    output.value = r.output;
+    expectedOutput.value = undefined;
+  } else if (r.status == 'WrongAnswer') {
+    if (testCaseOutput === undefined) {
       outputTitle.value = undefined;
-      output.value = realOutput;
+      output.value = r.output;
       expectedOutput.value = undefined;
-    },
-    [ResultCode.WRONG_ANSWER]: () => {
-      if (testCaseOutput === undefined) {
-        outputTitle.value = undefined;
-        output.value = realOutput;
-        expectedOutput.value = undefined;
-      } else {
-        outputTitle.value = '实际输出和预期输出不一致！';
-        output.value = realOutput;
-        expectedOutput.value = testCaseOutput;
-      }
-    },
-    [ResultCode.CPU_TIME_LIMIT_EXCEEDED]: () => {
-      outputTitle.value = '运行超时！';
-      output.value = `${cpu_time}ms`;
-      expectedOutput.value = undefined;
-    },
-    [ResultCode.REAL_TIME_LIMIT_EXCEEDED]: () => {
-      outputTitle.value = '运行超时！';
-      output.value = `${real_time}ms`;
-      expectedOutput.value = undefined;
-    },
-    [ResultCode.MEMORY_LIMIT_EXCEEDED]: () => {
-      outputTitle.value = '内存超限！';
-      output.value = `${memory}byte`;
-      expectedOutput.value = undefined;
-    },
-    [ResultCode.RUNTIME_ERROR]: () => {
-      outputTitle.value = '运行时错误！';
-      output.value = `exit code: ${exit_code}\nsignal: ${signal}\noutput: ${realOutput}`;
-      expectedOutput.value = undefined;
-    },
-    [ResultCode.SYSTEM_ERROR]: () => {
-      outputTitle.value = '系统错误！';
-      output.value = `error code: ${error}`;
-      expectedOutput.value = undefined;
-    },
-  };
-  resultHandlers[result]?.();
+    } else {
+      outputTitle.value = '实际输出和预期输出不一致！';
+      output.value = r.output;
+      expectedOutput.value = testCaseOutput;
+    }
+  } else if (r.status == 'TimeLimitExceeded') {
+    outputTitle.value = '运行超时！';
+    output.value = r.message;
+    expectedOutput.value = undefined;
+  } else if (r.status == 'MemoryLimitExceeded') {
+    outputTitle.value = '内存超限！';
+    output.value = r.message;
+    expectedOutput.value = undefined;
+  } else if (r.status == 'RuntimeError') {
+    outputTitle.value = '运行错误！';
+    output.value = r.message;
+    expectedOutput.value = undefined;
+  } else if (r.status == 'SystemError') {
+    outputTitle.value = '系统错误！';
+    output.value = r.message;
+    expectedOutput.value = undefined;
+  }
 };
 
 const showTestCase = (testCase: TestCase) => {
@@ -144,19 +109,9 @@ const showTestCase = (testCase: TestCase) => {
 const showTestCaseResult = (testCase: TestCase, submission: Submission, testCaseResult?: TestCaseResult) => {
   input.value = testCase.input;
   if (testCaseResult) {
-    showRunTestCaseResult(
-      testCaseResult.result,
-      testCaseResult.output,
-      testCase.output,
-      testCaseResult.cpu_time,
-      testCaseResult.real_time,
-      testCaseResult.memory,
-      testCaseResult.exit_code,
-      testCaseResult.signal,
-      testCaseResult.error
-    );
+    showRunTestCaseResult(testCaseResult, testCase.output);
   } else {
-    showRunError(submission.err as string, submission.error_reason as string);
+    showRunResultError(submission.status as ErrType, submission.message);
   }
 };
 
