@@ -13,8 +13,10 @@
       </div>
       <el-button @click="handlePlusButtonClick" :icon="Plus">新建</el-button>
     </div>
-    <el-table class="table" :data="tableData" @row-click="handleTableRowClick" row-class-name="table-row">
-      <el-table-column type="expand">
+    <el-table class="table" ref="tableRef" :data="tableData" @row-click="handleTableRowClick"
+      @selection-change="handleTableSelectionChange" row-class-name="table-row">
+      <el-table-column v-if="props.selectable" type="selection" width="55" />
+      <el-table-column v-else type="expand" width="55">
         <template #default="scope">
           <el-table :data="scope.row.problems" :border="true">
             <el-table-column prop="title" label="题目" show-overflow-tooltip />
@@ -38,27 +40,41 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import { Search, Plus } from '@element-plus/icons-vue';
+import type { TableInstance } from 'element-plus'
 import { axiosInstance } from '@/services/http';
 import dayjs from 'dayjs';
 
+const props = defineProps<{
+  selectable?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (event: 'plus-button-click'): void;
+  (event: 'row-click', row: any): void;
+  (event: 'selection-change', rows: Array<any>): void;
+}>();
+
 const pageSize = 30;
-const router = useRouter();
 
 const filterOptions = ref([])
 const searchInput = ref('')
 const currentPage = ref(1);
 const total = ref(0);
 const tableData = ref<Array<any>>([]);
+const tableRef = ref<TableInstance>();
 
 const handlePlusButtonClick = () => {
-  router.push({ name: 'design' });
+  emit('plus-button-click');
 }
 
 const handleTableRowClick = (row: any) => {
-  router.push({ name: 'design', query: { exercise: row.id } });
+  emit('row-click', row);
 };
+
+const handleTableSelectionChange = (rows: any[]) => {
+  emit('selection-change', rows);
+}
 
 const load = async () => {
   let url = `/design/problem-lists/?page_size=${pageSize}&page=${currentPage.value}`;
@@ -93,6 +109,12 @@ const load = async () => {
 watch(currentPage, async () => {
   load();
 }, { immediate: true })
+
+defineExpose({
+  getSelectionRows: () => { return tableRef.value?.getSelectionRows(); },
+  clearSelection: () => { tableRef.value?.clearSelection(); },
+  toggleRowSelection: (row: any, selected?: boolean) => { tableRef.value?.toggleRowSelection(row, selected); },
+});
 </script>
 
 <style scoped>

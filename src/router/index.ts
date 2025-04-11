@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ChatBotView from '../views/ChatBotView.vue'
-import AssignView from '../views/teacher/AssignView.vue'
-import DesignView from '../views/teacher/DesignView.vue'
+import AssignClassesView from '@/views/teacher/assign/AssignClassesView.vue'
+import AssignStudentsView from '@/views/teacher/assign/AssignStudentsView.vue'
+import AssignExerciseView from '../views/teacher/assign/AssignExerciseView.vue'
+import DesignExerciseView from '../views/teacher/design/DesignExerciseView.vue'
 import DesignProblemView from '../views/teacher/design/DesignProblemView.vue'
 
 const router = createRouter({
@@ -18,14 +20,24 @@ const router = createRouter({
       component: () => import('../views/ExerciseView.vue'),
     },
     {
+      path: '/classes',
+      name: 'classes',
+      component: AssignClassesView,
+    },
+    {
+      path: '/students',
+      name: 'students',
+      component: AssignStudentsView,
+    },
+    {
       path: '/assign',
       name: 'assign',
-      component: AssignView,
+      component: AssignExerciseView,
     },
     {
       path: '/design',
       name: 'design',
-      component: DesignView,
+      component: DesignExerciseView,
     },
     {
       path: '/problem',
