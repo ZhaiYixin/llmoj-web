@@ -8,8 +8,8 @@
           <el-button text>{{ problemIndex + 1 }} / {{ problemList.length }}</el-button>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item v-for="(p, index) in problemList" :key="p.id" @click="problemIndex = index"
-                :disabled="index == problemIndex">
+              <el-dropdown-item v-for="(p, index) in problemList" :key="p.i" @click="problemIndex = index"
+                :icon="getMenuIcon(p.i)">
                 {{ p.title }}
               </el-dropdown-item>
             </el-dropdown-menu>
@@ -30,19 +30,22 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { axiosInstance } from '@/services/http';
-import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Select, CloseBold, EditPen } from '@element-plus/icons-vue'
 import TextEditor from '../teacher/design/TextEditor.vue';
 
 const props = defineProps<{
   problemId?: string;
+  itemId?: string;
   problemListId?: string;
+  assignmentId?: string;
 }>();
 
-const emit = defineEmits(['update:problem-id']);
+const emit = defineEmits(['update-item']);
 
 const title = ref('');
 const description = ref('');
 const problemList = ref([]);
+const homework = ref({});
 
 const problemIndex = computed({
   get: () => {
@@ -50,10 +53,17 @@ const problemIndex = computed({
   },
   set: (newIndex) => {
     if (newIndex >= 0 && newIndex < problemList.value.length) {
-      emit('update:problem-id', problemList.value[newIndex].id);
+      emit('update-item', problemList.value[newIndex].i, problemList.value[newIndex].id);
     }
   }
 });
+
+const getMenuIcon = (itemId: string) => {
+  const p = homework.value[itemId];
+  if (!p || !p.best_submission) return EditPen;
+  const b = p.best_submission;
+  return (b.success_count == b.total_count) ? Select : CloseBold;
+}
 
 const loadProblem = async (id: string) => {
   const p = problemList.value.find(p => p.id == id);
@@ -71,6 +81,7 @@ const loadProblemList = async (id: string) => {
   const url = `/design/problem-lists/${id}/`;
   const response = await axiosInstance.get(url);
   problemList.value = response.data.items.filter((p) => p.problem).map((p) => ({
+    i: String(p.id),
     id: String(p.problem.id),
     title: p.problem.title,
     description: p.problem.description,
@@ -80,6 +91,15 @@ const loadProblemList = async (id: string) => {
   }
 }
 
+const loadAssignment = async (id: string) => {
+  const url = `/assign/homeworks/${id}/`;
+  const response = await axiosInstance.get(url);
+  const a = response.data.assignment;
+  const h = response.data.homework;
+  homework.value = h?.problems || {};
+  loadProblemList(a.problem_list);
+};
+
 watch(() => props.problemId, () => {
   if (props.problemId)
     loadProblem(props.problemId);
@@ -88,6 +108,11 @@ watch(() => props.problemId, () => {
 watch(() => props.problemListId, () => {
   if (props.problemListId)
     loadProblemList(props.problemListId);
+}, { immediate: true });
+
+watch(() => props.assignmentId, () => {
+  if (props.assignmentId)
+    loadAssignment(props.assignmentId);
 }, { immediate: true });
 </script>
 

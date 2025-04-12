@@ -15,7 +15,7 @@ const router = createRouter({
       component: ChatBotView,
     },
     {
-      path: '/exercise/:id',
+      path: '/exercise',
       name: 'exercise',
       component: () => import('../views/ExerciseView.vue'),
     },

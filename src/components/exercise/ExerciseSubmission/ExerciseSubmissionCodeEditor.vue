@@ -33,9 +33,9 @@ const languageTemplates: Record<string, string> = {
 defineExpose({
   getEditorValue: () => editorValue.value,
   setEditorValue: (newValue: string) => editorValue.value = newValue,
-  startWithTemplate: () => {
+  startWithTemplate: (lang: string) => {
     if (props.language) {
-      editorValue.value = languageTemplates[props.language];
+      editorValue.value = languageTemplates[lang];
     } else {
       editorValue.value = '请在此输入代码';
     }
@@ -45,7 +45,7 @@ defineExpose({
 export type ExerciseSubmissionCodeEditorInstance = {
   getEditorValue: () => string;
   setEditorValue: (newValue: string) => void;
-  startWithTemplate: () => void;
+  startWithTemplate: (lang: string) => void;
 };
 </script>
 

@@ -32,6 +32,8 @@ import dayjs from 'dayjs';
 import type { Submission } from '@/types/judge'
 
 const props = defineProps<{
+  assignmentId?: string;
+  itemId?: string;
   problemId?: string;
 }>();
 
@@ -41,6 +43,7 @@ const emit = defineEmits<{
 
 const submissions = ref<Array<Submission>>();
 const selectedSubmission = ref<Submission>();
+const homework_submissions = ref<Array<number>>([]);
 
 const handleDetailBtnClicked = () => {
   if (selectedSubmission.value) {
@@ -51,10 +54,28 @@ const handleDetailBtnClicked = () => {
 const loadSubmissions = async () => {
   const url = `/judge/problems/${props.problemId}/submissions/`;
   const response = await axiosInstance.get(url);
-  submissions.value = response.data;
+  if (props.assignmentId) {
+    submissions.value = response.data.filter(s => Boolean(homework_submissions.value.find(id => id == s.id)));
+  } else {
+    submissions.value = response.data;
+  }
+};
+
+const loadAssignment = async (id: string) => {
+  const url = `/assign/homeworks/${id}/`;
+  const response = await axiosInstance.get(url);
+  const a = response.data.assignment;
+  const h = response.data.homework;
+  const ps = h?.problems || {};
+  const p = ps[Number(props.itemId)];
+  if (p) {
+    homework_submissions.value = p.submissions;
+  }
 };
 
 const load = async () => {
+  if (props.assignmentId)
+    await loadAssignment(props.assignmentId)
   await loadSubmissions();
   if (submissions.value?.length) {
     selectedSubmission.value = submissions.value[0];

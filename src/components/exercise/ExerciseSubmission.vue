@@ -7,7 +7,8 @@
         </el-icon>
         <span>代码</span>
       </template>
-      <ExerciseSubmissionCode ref="codeRef" :problem-id="props.problemId" @submitted="handleSubmitted" />
+      <ExerciseSubmissionCode ref="codeRef" :assignment-id="assignmentId" :item-id="itemId"
+        :problem-id="props.problemId" @submitted="handleSubmitted" />
     </el-tab-pane>
     <el-tab-pane name="test">
       <template #label>
@@ -36,8 +37,8 @@
         </el-icon>
         <span>提交</span>
       </template>
-      <ExerciseSubmissionHistory ref="historyRef" :problem-id="props.problemId"
-        @detail-btn-clicked="handleHistoryDetailBtnClicked" />
+      <ExerciseSubmissionHistory ref="historyRef" :assignment-id="assignmentId" :item-id="itemId"
+        :problem-id="props.problemId" @detail-btn-clicked="handleHistoryDetailBtnClicked" />
     </el-tab-pane>
     <el-tab-pane name="answer">
       <template #label>
@@ -69,6 +70,8 @@ import type { ExerciseSubmissionHistoryInstance } from './ExerciseSubmission/Exe
 import type { Submission, TestCase, TestCaseResult } from '@/types/judge';
 
 const props = defineProps<{
+  assignmentId: string | undefined;
+  itemId: string | undefined;
   problemId: string | undefined;
 }>();
 

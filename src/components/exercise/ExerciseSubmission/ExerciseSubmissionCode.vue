@@ -18,6 +18,8 @@ import ExerciseSubmissionCodeEditor from './ExerciseSubmissionCodeEditor.vue';
 import type { ExerciseSubmissionCodeEditorInstance } from './ExerciseSubmissionCodeEditor.vue';
 
 const props = defineProps<{
+  assignmentId?: string;
+  itemId?: string;
   problemId?: string;
 }>();
 
@@ -47,7 +49,14 @@ const handleSubmitBtnClicked = async () => {
     lang: language.value,
     src: editorRef.value?.getEditorValue(),
   });
-  submissionId.value = String(response.data.submission_id);
+  const submission_id = String(response.data.submission_id);
+  if (props.assignmentId && props.itemId) {
+    await axiosInstance.post(`/assign/homeworks/${props.assignmentId}/`, {
+      submission_id: submission_id,
+      problem_list_item_id: props.itemId,
+    });
+  }
+  submissionId.value = submission_id;
   emit('submitted');
   isSubmitting.value = false;
 };
@@ -63,7 +72,7 @@ const loadSubmission = async () => {
     editorRef.value?.setEditorValue(submission.src);
   } else {
     submissionId.value = null;
-    editorRef.value?.startWithTemplate();
+    editorRef.value?.startWithTemplate(language.value);
   }
 };
 
@@ -76,7 +85,7 @@ watch(() => props.problemId, () => {
 // 如果从未提交，则加载模板
 watch(() => language.value, () => {
   if (!submissionId.value) {
-    editorRef.value?.startWithTemplate();
+    editorRef.value?.startWithTemplate(language.value);
   }
 }, { immediate: true });
 
