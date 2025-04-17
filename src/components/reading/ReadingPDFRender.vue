@@ -1,14 +1,22 @@
 <template>
   <div class="pdf-container" ref="pdfContainerRef">
-    <canvas v-for="i in pdfNumPages" :id="`pdf-canvas-${i}`" :key="i" />
+    <div v-for="i in pdfNumPages" :id="`pdf-page-${i}`" :key="i" class="pdf-page">
+      <canvas :id="`pdf-canvas-${i}`" class="pdf-canvas" />
+      <div :id="`pdf-text-layer-${i}`" class="textLayer"></div>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 // 部分参考了https://juejin.cn/post/7277475232320536633
+// 部分参考了https://zhuanlan.zhihu.com/p/128127757
 import { nextTick, onMounted, ref, onUnmounted, reactive, watch } from "vue";
+import { getDocument, GlobalWorkerOptions, TextLayer } from 'pdfjs-dist';
 import { debounce } from "lodash";
 import type { PDFDocumentProxy } from "pdfjs-dist";
+import 'pdfjs-dist/web/pdf_viewer.css';
+
+GlobalWorkerOptions.workerSrc = "/node_modules/pdfjs-dist/build/pdf.worker.min.mjs";
 
 let pdfDoc: PDFDocumentProxy | null = null;
 const renderLocks = new Map<number, Promise<void>>(); // 防止在渲染某一页canvas的时候又发起渲染
@@ -24,8 +32,6 @@ const pdfContainerRef = ref<HTMLElement | null>(null);
 
 const initPdfLoader = async (src: string) => {
   // 加载pdf文件
-  const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
-  GlobalWorkerOptions.workerSrc = "/node_modules/pdfjs-dist/build/pdf.worker.min.mjs";
   const loadingTask = getDocument(src);
   const pdf = await loadingTask.promise;
   pdf.loadingParams.disableAutoFetch = true;
@@ -54,6 +60,24 @@ const renderPage = async (pageNum: number) => {
     canvasDefaultProperties.styleHeight = viewport.height;
   } catch (error) {
     console.error(`Error rendering page ${pageNum}:`, error);
+  }
+
+  // 渲染文本
+  const textLayerDiv = document.getElementById(`pdf-text-layer-${pageNum}`) as HTMLDivElement;
+  if (!textLayerDiv) return;
+  try {
+    const textContent = await page.getTextContent();
+    textLayerDiv.style.width = `${canvas.style.width}px`;
+    textLayerDiv.style.height = `${canvas.style.height}px`;
+    textLayerDiv.style.setProperty('--total-scale-factor', viewport.scale.toString());
+    const textLayer = new TextLayer({
+      textContentSource: textContent,
+      viewport: viewport,
+      container: textLayerDiv,
+    });
+    await textLayer.render();
+  } catch (error) {
+    console.error(`Error rendering text layer for page ${pageNum}:`, error);
   }
 };
 
@@ -100,10 +124,10 @@ const calCurrentWatchingPage = () => {
   const containerHeight = pdfContainerRef.value.clientHeight;
   const centerY = scrollTop + containerHeight / 2;
   for (let i = 1; i <= pdfNumPages.value; i++) {
-    const canvas = document.getElementById(`pdf-canvas-${i}`) as HTMLCanvasElement;
-    if (canvas) {
-      const top = canvas.offsetTop;
-      const height = canvas.offsetHeight;
+    const pageDom = document.getElementById(`pdf-page-${i}`) as HTMLElement;
+    if (pageDom) {
+      const top = pageDom.offsetTop;
+      const height = pageDom.offsetHeight;
       if (top <= centerY && centerY < top + height) {
         return i;
       }
@@ -167,12 +191,13 @@ defineExpose({ currentWatchingPage, load, jumpToPage });
   height: 100%;
   overflow-y: scroll;
   overflow-x: hidden;
+}
 
-  canvas {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
+.pdf-page {
+  position: relative;
+}
+
+.pdf-canvas {
+  display: block;
 }
 </style>
