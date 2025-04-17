@@ -20,6 +20,11 @@ const router = createRouter({
       component: () => import('../views/ExerciseView.vue'),
     },
     {
+      path: '/reading',
+      name: 'reading',
+      component: () => import('../views/ReadingView.vue'),
+    },
+    {
       path: '/classes',
       name: 'classes',
       component: AssignClassesView,
