@@ -16,6 +16,7 @@
   "dependencies": {
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
+    "async-mutex": "^0.5.0",
     "axios": "^1.8.3",
     "dayjs": "^1.11.13",
     "element-plus": "^2.9.6",

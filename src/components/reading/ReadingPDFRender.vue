@@ -12,26 +12,28 @@
 <script lang="ts" setup>
 // 部分参考了https://juejin.cn/post/7277475232320536633
 // 部分参考了https://zhuanlan.zhihu.com/p/128127757
-import { ref, reactive, watch } from "vue";
+import { ref, watch } from "vue";
 import { getDocument, GlobalWorkerOptions, TextLayer } from 'pdfjs-dist';
-import { debounce } from "lodash";
+import { throttle } from "lodash";
+import { Mutex } from "async-mutex";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import 'pdfjs-dist/web/pdf_viewer.css';
 
 GlobalWorkerOptions.workerSrc = "/node_modules/pdfjs-dist/build/pdf.worker.min.mjs";
 
 let pdfDoc: PDFDocumentProxy | null = null;
-const renderLocks = new Map<number, Promise<void>>(); // 防止在渲染某一页canvas的时候又发起渲染
+const renderLocks = new Map<number, Mutex>(); // 防止在渲染某一页canvas的时候又发起渲染
+const pageStatus = new Map<number, { timestamp: number; rendered: number }>(); // 已加载的页，懒加载不要重新加载
+let globalTimestamp = 0; // 保证pageStatus不被旧的操作所覆盖
+let pageDefaultProperties = {
+  width: 595, // 页面在未渲染情况下的宽高
+  height: 842,
+}
 
-const pdfNumPages = ref(0); // pdf总页数
-const currentWatchingPage = ref(0); // 用户当前正在观看的页的页码
-const currentScale = ref(1); // 缩放比例
-const currentRotation = ref(0); // 旋转角度
-const pageIsRendered = reactive<Record<number, boolean>>({}); // 页面是否已渲染
-const canvasDefaultProperties = reactive({
-  styleWidth: 0, // 页面在未渲染情况下的宽高
-  styleHeight: 0,
-});
+const pdfNumPages = defineModel<number>('numPages', { default: 1 }); // pdf总页数
+const currentWatchingPage = defineModel<number>('current', { default: 1 }); // 用户当前正在观看的页的页码
+const currentScale = defineModel<number>('scale', { default: 1 }); // 缩放比例
+const currentRotation = defineModel<number>('rotation', { default: 0 }); // 旋转角度
 const pdfContainerRef = ref<HTMLElement | null>(null);
 
 const initPdfLoader = async (src: string) => {
@@ -51,17 +53,14 @@ const renderPage = async (pageNum: number) => {
   if (!canvas) return;
   const canvasContext = canvas.getContext("2d");
   if (!canvasContext) return;
-  // currentScale.value = pdfContainerRef.value ? pdfContainerRef.value.clientWidth / (page.view[2] - page.view[0]) : 1; // page.view[2] - page.view[0] 是页面的原始宽度
   const viewport = page.getViewport({ scale: currentScale.value, rotation: currentRotation.value });
+  setPageWidthHeightIfChanged(viewport.width, viewport.height);
   setCanvasProperties(canvas, canvasContext, viewport.width, viewport.height);
 
   // 开始渲染
   try {
     const renderTask = page.render({ canvasContext: canvasContext, viewport: viewport });
     await renderTask.promise;
-    pageIsRendered[pageNum] = true;
-    canvasDefaultProperties.styleWidth = viewport.width;
-    canvasDefaultProperties.styleHeight = viewport.height;
   } catch (error) {
     console.error(`Error rendering page ${pageNum}:`, error);
   }
@@ -71,17 +70,13 @@ const renderPage = async (pageNum: number) => {
   if (!textLayerDiv) return;
   try {
     const textContent = await page.getTextContent();
-    textLayerDiv.style.setProperty('--total-scale-factor', viewport.scale.toString());
     const textLayer = new TextLayer({
       textContentSource: textContent,
       viewport: viewport,
       container: textLayerDiv,
     });
     await textLayer.render();
-    if (currentRotation.value == 90 || currentRotation.value == 270) {
-      textLayerDiv.style.width = `${viewport.height}px`;
-      textLayerDiv.style.height = `${viewport.width}px`;
-    }
+    setTextLayerProperties(textLayerDiv, viewport.scale, viewport.width, viewport.height);
   } catch (error) {
     console.error(`Error rendering text layer for page ${pageNum}:`, error);
   }
@@ -89,27 +84,51 @@ const renderPage = async (pageNum: number) => {
 
 const renderPageWithLock = async (pageNum: number) => {
   // 防止对同一个canvas同时进行多个操作
-  if (renderLocks.has(pageNum)) return renderLocks.get(pageNum);
-  const renderPromise = renderPage(pageNum).catch((error) => {
-    console.error(`Error rendering page ${pageNum}:`, error);
-    throw error;
-  }).finally(() => {
-    renderLocks.delete(pageNum);
-  });
-  renderLocks.set(pageNum, renderPromise);
-  return renderPromise;
+  let mutex = renderLocks.get(pageNum);
+  if (!mutex) {
+    mutex = new Mutex();
+    renderLocks.set(pageNum, mutex);
+  }
+  const release = await mutex.acquire();
+  try {
+    const timestamp = ++globalTimestamp;
+    pageStatus.set(pageNum, { timestamp: timestamp, rendered: 1 });
+    await renderPage(pageNum);
+    const latestPageStatus = pageStatus.get(pageNum);
+    if (latestPageStatus && latestPageStatus.timestamp <= timestamp) {
+      pageStatus.set(pageNum, { timestamp: timestamp, rendered: 2 });
+    }
+  } finally {
+    release();
+  }
 };
 
-const lazyRenderPdf = debounce((pageNum: number) => {
+const lazyRenderPdf = (pageNum: number, radius: number = 1, rendered: number = 1) => {
   // 如果未渲染的话，渲染PDF的某页以及临近的几页
-  const radius = 2;
-  const start = Math.max(1, pageNum - radius);
-  const end = Math.min(pdfNumPages.value, pageNum + radius);
+
+  // 渲染半径取决于`radius`（单位是屏幕）
+  const container = pdfContainerRef.value;
+  if (!container) return;
+  const pageHeight = pageDefaultProperties.height || 10000;
+  const containerHeight = container.clientHeight;
+  const pagesPerScreen = Math.ceil(containerHeight / pageHeight);
+  const neighbors = Math.ceil(radius * pagesPerScreen);
+
+  // 是否渲染某页还取决于`rendered`，不重新渲染那些渲染程度高的页
+  const start = Math.max(1, pageNum - neighbors);
+  const end = Math.min(pdfNumPages.value, pageNum + neighbors);
   for (let i = start; i <= end; i++) {
-    if (pageIsRendered[i]) continue;
+    const s = pageStatus.get(i);
+    if (s && s.rendered >= rendered) continue;
     renderPageWithLock(i);
   }
-}, 100);
+};
+
+const reRenderPdf = () => {
+  // 清空之前的渲染
+  pageStatus.clear();
+  lazyRenderPdf(currentWatchingPage.value, 0.5, 10000);
+}
 
 const setCanvasProperties = (canvas: HTMLCanvasElement, canvasContext: CanvasRenderingContext2D, width: number, height: number) => {
   // 设置canvas属性，同时保证清晰度
@@ -121,6 +140,76 @@ const setCanvasProperties = (canvas: HTMLCanvasElement, canvasContext: CanvasRen
   canvasContext.setTransform(ratio, 0, 0, ratio, 0, 0);
   canvas.style.width = `${Math.floor(width)}px`; // 画板尺寸
   canvas.style.height = `${Math.floor(height)}px`;
+};
+
+const setTextLayerProperties = (textLayerDiv: HTMLElement, scale: number, width: number, height: number) => {
+  // 设置textLayer属性
+  // 文字缩放
+  textLayerDiv.style.setProperty('--total-scale-factor', scale.toString());
+  // 处理pdf旋转时textLayerDiv没有旋转的情况（似乎是pdf.js的Bug？）
+  const isRotated = currentRotation.value === 90 || currentRotation.value === 270;
+  if (isRotated) {
+    [width, height] = [height, width];
+    textLayerDiv.style.width = `${Math.floor(width)}px`;
+    textLayerDiv.style.height = `${Math.floor(height)}px`;
+  }
+}
+
+const setPageWidthHeight = (width: number, height: number) => {
+  // 设置pdf全部未渲染页面的宽高
+
+  // 由于整个容器宽高变化，所以相对位置会变化，需要事先保存和事后恢复
+  const savedPosition = saveScrollPositionRatio();
+
+  pageDefaultProperties = { width: width, height: height };
+  for (let i = 1; i <= pdfNumPages.value; i++) {
+    const s = pageStatus.get(i)
+    if (s && s.rendered >= 2) continue;
+    const pageDom = document.getElementById(`pdf-page-${i}`) as HTMLElement;
+    if (!pageDom) continue;
+    const canvas = pageDom.querySelector('canvas') as HTMLCanvasElement;
+    if (canvas) {
+      canvas.style.width = `${Math.floor(width)}px`;
+      canvas.style.height = `${Math.floor(height)}px`;
+    }
+    const textLayer = pageDom.querySelector('.textLayer') as HTMLDivElement;
+    if (textLayer) {
+      textLayer.style.width = `${Math.floor(width)}px`;
+      textLayer.style.height = `${Math.floor(height)}px`;
+    }
+  }
+
+  restoreScrollPositionRatio(savedPosition);
+};
+
+const setPageWidthHeightIfChanged = (width: number, height: number) => {
+  // 只在宽高变化时才重新设置
+  if (pageDefaultProperties.width == width && pageDefaultProperties.height == height) return;
+  setPageWidthHeight(width, height);
+}
+
+const saveScrollPositionRatio = () => {
+  // 保存相对于容器的位置
+  const container = pdfContainerRef.value;
+  if (!container) return null;
+  const scrollTop = container.scrollTop;
+  const scrollLeft = container.scrollLeft;
+  const scrollHeight = container.scrollHeight;
+  const scrollWidth = container.scrollWidth;
+  return {
+    topRatio: scrollTop / scrollHeight,
+    leftRatio: scrollLeft / scrollWidth,
+  };
+};
+
+const restoreScrollPositionRatio = (savedPosition: { topRatio: number; leftRatio: number } | null) => {
+  // 恢复相对于容器的位置
+  const container = pdfContainerRef.value;
+  if (!container || !savedPosition) return;
+  const { topRatio, leftRatio } = savedPosition;
+  const newScrollTop = Math.round(topRatio * container.scrollHeight);
+  const newScrollLeft = Math.round(leftRatio * container.scrollWidth);
+  container.scrollTo({ top: newScrollTop, left: newScrollLeft, });
 };
 
 const calCurrentWatchingPage = () => {
@@ -142,62 +231,70 @@ const calCurrentWatchingPage = () => {
   return 0;
 };
 
-const onPdfContainerScroll = debounce(() => {
-  currentWatchingPage.value = calCurrentWatchingPage();
-}, 100);
-
-watch(canvasDefaultProperties, () => {
-  // 设置未渲染页面的宽高
-  for (let i = 1; i <= pdfNumPages.value; i++) {
-    if (pageIsRendered[i]) continue;
-    const canvas = document.getElementById(`pdf-canvas-${i}`) as HTMLCanvasElement;
-    if (!canvas) continue;
-    canvas.style.width = `${canvasDefaultProperties.styleWidth}px`;
-    canvas.style.height = `${canvasDefaultProperties.styleHeight}px`;
+const onPdfContainerScroll = throttle(() => {
+  const current = calCurrentWatchingPage();
+  if (current) {
+    currentWatchingPage.value = current;
   }
-});
+}, 100);
 
 watch(currentWatchingPage, () => {
   lazyRenderPdf(currentWatchingPage.value);
 });
 
 watch(currentScale, () => {
-  Object.keys(pageIsRendered).forEach(key => {
-    delete pageIsRendered[key];
-  });
-  lazyRenderPdf(currentWatchingPage.value);
+  reRenderPdf();
 });
 
 watch(currentRotation, () => {
-  Object.keys(pageIsRendered).forEach(key => {
-    delete pageIsRendered[key];
-  });
-  lazyRenderPdf(currentWatchingPage.value);
+  reRenderPdf();
 });
 
 const load = async (pdfUrl: string) => {
   // 加载pdf
   await initPdfLoader(pdfUrl);
-  jumpToPage(1);
+  lazyRenderPdf(1);
 };
 
 const jumpToPage = async (pageNum: number) => {
   // 跳转到某一页
   pageNum = Math.max(1, Math.min(pdfNumPages.value, pageNum));
   currentWatchingPage.value = pageNum;
-  lazyRenderPdf(pageNum);
   if (!pdfContainerRef.value) return;
-  const canvas = document.getElementById(`pdf-canvas-${pageNum}`) as HTMLCanvasElement;
-  if (!canvas) return;
-  const top = canvas.offsetTop;
+  const pageDom = document.getElementById(`pdf-page-${pageNum}`) as HTMLElement;
+  if (!pageDom) return;
+  const pageTop = pageDom.offsetTop;
+  const top = pageTop - 16;
   pdfContainerRef.value.scrollTo({ top: top, });
 };
 
-defineExpose({ currentWatchingPage, load, jumpToPage });
+const scaleFit = async (mode: 'width' | 'height', pageNum: number = 1) => {
+  // 缩放使得页面宽度（高度）适应屏幕宽度（高度）
+  const container = pdfContainerRef.value;
+  if (!container) return;
+  const containerWidth = container.clientWidth - 32;
+  const containerHeight = container.clientHeight - 40;
+
+  const page = await pdfDoc!.getPage(pageNum);
+  const pagePrimitiveWidth = page.view[2] - page.view[0];  // page.view[2] - page.view[0] 是页面的原始宽度
+  const pagePrimitiveHeight = page.view[3] - page.view[1];  // page.view[3] - page.view[1] 是页面的原始高度
+  const isRotated = currentRotation.value === 90 || currentRotation.value === 270;
+  const _pagePrimitiveWidth = isRotated ? pagePrimitiveHeight : pagePrimitiveWidth;
+  const _pagePrimitiveHeight = isRotated ? pagePrimitiveWidth : pagePrimitiveHeight;
+
+  if (mode == 'width') {
+    currentScale.value = containerWidth / _pagePrimitiveWidth;
+  } else {
+    currentScale.value = containerHeight / _pagePrimitiveHeight;
+  }
+}
+
+defineExpose({ load, jumpToPage, scaleFit });
 </script>
 
 <style scoped>
 .pdf-container {
+  position: relative;
   overflow-y: auto;
   overflow-x: auto;
 }
@@ -215,6 +312,7 @@ defineExpose({ currentWatchingPage, load, jumpToPage });
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   width: max-content;
   position: relative;
+  background-color: white;
 }
 
 .pdf-canvas {
