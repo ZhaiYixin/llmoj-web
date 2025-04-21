@@ -1,9 +1,12 @@
 <template>
   <div class="pdf-viewer">
-    <ReadingTopToolbar :num-pages="numPages" :current="current" v-model:scale="scale" v-model:rotation="rotation"
-      @jump="handleToolbarJump" @scale-fit="handleToolbarScaleFit" />
-    <ReadingPDFRender ref="pdfRenderRef" v-model:num-pages="numPages" v-model:current="current" v-model:scale="scale"
-      v-model:rotation="rotation" class="pdf-render" />
+    <ReadingTopToolbar :num-pages="numPages" :current="current" v-model:show-outline="showOutline" v-model:scale="scale"
+      v-model:rotation="rotation" @jump="handleToolbarJump" @scale-fit="handleToolbarScaleFit" />
+    <div class="pdf-main">
+      <ReadingLeftOutline v-if="showOutline" :pdf-id="pdfId" :current="current" @jump="handleOutlineJump" />
+      <ReadingPDFRender ref="pdfRenderRef" v-model:num-pages="numPages" v-model:current="current" v-model:scale="scale"
+        v-model:rotation="rotation" class="pdf-render" />
+    </div>
   </div>
 </template>
 
@@ -12,12 +15,14 @@ import { ref, watch } from 'vue';
 
 import { axiosInstance } from '@/services/http';
 import ReadingTopToolbar from '@/components/reading/ReadingTopToolbar.vue';
+import ReadingLeftOutline from '@/components/reading/ReadingLeftOutline.vue';
 import ReadingPDFRender from '@/components/reading/ReadingPDFRender.vue';
 
 const props = defineProps<{
   pdfId?: string;
 }>();
 
+const showOutline = ref(true);
 const pdfRenderRef = ref();
 const numPages = ref(1);
 const current = ref(1);
@@ -31,6 +36,10 @@ const handleToolbarJump = (pageNum: number) => {
 const handleToolbarScaleFit = (mode: 'width' | 'height') => {
   pdfRenderRef.value?.scaleFit(mode);
 }
+
+const handleOutlineJump = (pageNum: number) => {
+  pdfRenderRef.value?.jumpToPage(pageNum);
+};
 
 const loadPDFFile = async (pdf_id: string) => {
   const url = `/pdf/files/${pdf_id}/`;
@@ -51,6 +60,13 @@ watch(() => props.pdfId, () => {
 .pdf-viewer {
   display: flex;
   flex-direction: column;
+}
+
+.pdf-main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow-y: hidden;
 }
 
 .pdf-render {
