@@ -62,4 +62,10 @@ const compiledMarkdown = (content: string) => {
   text-align: left;
   align-self: flex-start;
 }
+
+.message.other {
+  text-align: left;
+  align-self: flex-start;
+  border: var(--el-border);
+}
 </style>

@@ -46,7 +46,8 @@
         </el-icon>
       </el-button>
     </el-col>
-    <el-col :span="4">
+    <el-col :span="4" class="toolbar-right">
+      <el-button :icon="ChatDotRound" text :bg="showChat" @click="handleShowChatButtonClick" />
     </el-col>
   </el-row>
 </template>
@@ -54,7 +55,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft, ArrowRight, Minus, Plus } from '@element-plus/icons-vue';
+import { ArrowLeft, ArrowRight, Minus, Plus, ChatDotRound } from '@element-plus/icons-vue';
 import MenuListIcon from '@/components/icons/IconMenuList.vue'
 import FitWidthIcon from '@/components/icons/IconFitWidth.vue'
 import FitHeightIcon from '@/components/icons/IconFitHeight.vue'
@@ -73,6 +74,7 @@ const emit = defineEmits<{
 const showOutline = defineModel<boolean>('show-outline', { default: true });
 const scale = defineModel<number>('scale', { default: 1 });
 const rotation = defineModel<number>('rotation', { default: 0 });
+const showChat = defineModel<boolean>('show-chat', { default: true });
 
 const currentPage = ref(props.current);
 const scaleInPercent = ref(100);
@@ -108,6 +110,10 @@ const handleRotateRight = () => {
   rotation.value = (rotation.value + 90) % 360;
 };
 
+const handleShowChatButtonClick = () => {
+  showChat.value = !showChat.value;
+}
+
 watch(() => props.current, () => {
   currentPage.value = props.current;
 });
@@ -129,5 +135,10 @@ watch(scale, (value) => {
   justify-content: center;
   align-items: center;
   gap: 10px;
+}
+
+.toolbar-right {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
