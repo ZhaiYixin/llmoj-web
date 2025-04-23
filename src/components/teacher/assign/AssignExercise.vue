@@ -1,8 +1,8 @@
 <template>
   <div class="screen">
     <el-scrollbar class="aside">
-      <AssignExerciseAside v-model:assignment="assignment" :readonly="readonly" :show-button="selecting"
-        @exercise-click="handleExerciseClick" @exercise-item-click="handleExerciseItemClick"
+      <AssignExerciseAside v-model:assignment="assignment" v-model:pdfs="pdfs" :readonly="readonly"
+        :show-button="selecting" @exercise-click="handleExerciseClick" @exercise-item-click="handleExerciseItemClick"
         @exercise-change-button-click="handleExerciseChangeButtonClick" />
       <div class="buttons">
         <el-button v-if="readonly" @click="handleEditButtonClick" :icon="EditPen" text circle />
@@ -48,6 +48,7 @@ const assignment = ref({
   release_date: dayjs().format(),
   due_date: dayjs().format(),
 });
+const pdfs = ref([]);
 const selecting = ref(false);
 const searchExerciseRef = ref();
 
@@ -139,6 +140,7 @@ const saveAssignment = async (method: 'post' | 'put') => {
     problem_list: assignment.value.problem_list,
     release_date: assignment.value.release_date,
     due_date: assignment.value.due_date,
+    pdfs: pdfs.value.map(p => p.id),
   });
 };
 
@@ -150,6 +152,7 @@ const loadAssignment = async () => {
   assignment.value.problem_list = String(a.problem_list);
   assignment.value.release_date = a.release_date;
   assignment.value.due_date = a.due_date;
+  pdfs.value = response.data.pdfs.map(p => p.pdf);
 };
 
 const clearAssignment = () => {
@@ -157,6 +160,7 @@ const clearAssignment = () => {
   assignment.value.problem_list = '';
   assignment.value.release_date = dayjs().format();
   assignment.value.due_date = dayjs().format();
+  pdfs.value = [];
 };
 
 watch(assignmentId, () => {

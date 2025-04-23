@@ -31,6 +31,9 @@
       <el-date-picker v-model="dateRange" :readonly="readonly" type="daterange" range-separator="~"
         start-placeholder="开始日期" end-placeholder="截止日期" />
     </el-form-item>
+    <el-form-item label="课件：">
+      <AssignExerciseAsidePdf v-model:pdfs="pdfs" />
+    </el-form-item>
   </el-form>
 </template>
 
@@ -40,6 +43,7 @@ import { Switch, Plus } from '@element-plus/icons-vue';
 import dayjs from 'dayjs';
 import { axiosInstance } from '@/services/http';
 import DraggableList from '@/components/teacher/design/DraggableList.vue';
+import AssignExerciseAsidePdf from '@/components/teacher/assign/exercise/AssignExerciseAsidePdf.vue';
 
 const props = defineProps({
   assignment: {
@@ -62,6 +66,8 @@ const emit = defineEmits<{
   (event: 'exercise-item-click', value: any): void;
   (event: 'exercise-change-button-click'): void;
 }>();
+
+const pdfs = defineModel<{ id: string; title: string }[]>('pdfs', { default: [] });
 
 const problemList = ref();
 
