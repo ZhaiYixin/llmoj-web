@@ -70,7 +70,7 @@ const sendMessage = async (messageContent: string) => {
 
   try {
     // 发送提问内容
-    await axiosInstance.post(`/pdf/files/${props.pdfId}/ask/`, JSON.stringify({ content: messageContent, page_id: props.current, section_id: currentSection.value?.id }));
+    await axiosInstance.post(`/pdf/files/${props.pdfId}/ask/`, JSON.stringify({ content: messageContent, page_number: props.current, section_id: currentSection.value?.id }));
 
     // 接收流式回答
     await fetchStreamResponse(

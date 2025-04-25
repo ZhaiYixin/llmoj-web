@@ -97,7 +97,7 @@ const loadAssignment = async (id: string) => {
   const a = response.data.assignment;
   const h = response.data.homework;
   homework.value = h?.problems || {};
-  loadProblemList(a.problem_list);
+  loadProblemList(a.problem_list.id);
 };
 
 watch(() => props.problemId, () => {
