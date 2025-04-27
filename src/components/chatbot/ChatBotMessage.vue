@@ -2,8 +2,8 @@
 // 一条聊天信息
 
 <template>
-  <div :class="['message', message.role]">
-    <p v-html="compiledMarkdown(message.content)"></p>
+  <div class="message-wrapper">
+    <p :class="['message', message.role]" v-html="compiledMarkdown(message.content)"></p>
     <LoadingIcon v-if="message.state == 'loading'" />
   </div>
 </template>
@@ -46,25 +46,28 @@ const compiledMarkdown = (content: string) => {
 </script>
 
 <style scoped>
+.message-wrapper {
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
 .message {
-  margin: 5px;
   padding: 10px;
   border-radius: 5px;
+  overflow-x: hidden;
 }
 
 .message.user {
-  text-align: right;
   background-color: #f5f5f5;
   align-self: flex-end;
 }
 
 .message.assistant {
-  text-align: left;
   align-self: flex-start;
 }
 
 .message.other {
-  text-align: left;
   align-self: flex-start;
   border: var(--el-border);
 }
