@@ -47,7 +47,8 @@
         </el-icon>
         <span>答案</span>
       </template>
-      TODO
+      <ExerciseSubmissionChat :problem-id="props.problemId" :getSrcAndLang="getSrcAndLang"
+        :active="activeTab == 'answer'" />
     </el-tab-pane>
   </el-tabs>
 </template>
@@ -63,6 +64,7 @@ import ExerciseSubmissionCode from './ExerciseSubmission/ExerciseSubmissionCode.
 import ExerciseSubmissionTest from './ExerciseSubmission/ExerciseSubmissionTest.vue';
 import ExerciseSubmissionTerminal from './ExerciseSubmission/ExerciseSubmissionTerminal.vue';
 import ExerciseSubmissionHistory from './ExerciseSubmission/ExerciseSubmissionHistory.vue';
+import ExerciseSubmissionChat from './ExerciseSubmission/ExerciseSubmissionChat.vue';
 import type { ExerciseSubmissionCodeInstance } from './ExerciseSubmission/ExerciseSubmissionCode.vue';
 import type { ExerciseSubmissionTestInstance } from './ExerciseSubmission/ExerciseSubmissionTest.vue';
 import type { ExerciseSubmissionTerminalInstance } from './ExerciseSubmission/ExerciseSubmissionTerminal.vue';
@@ -105,6 +107,13 @@ const handleHistoryDetailBtnClicked = (submissionId: string) => {
   activeTab.value = 'test';
   testRef.value?.show(submissionId);
 }
+
+const getSrcAndLang = async () => {
+  return {
+    src: codeRef.value?.getEditorValue(),
+    lang: codeRef.value?.getLanguage(),
+  };
+};
 </script>
 
 <style scoped>
