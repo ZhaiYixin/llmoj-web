@@ -1,29 +1,31 @@
 // ScrollableContainer.vue
 
 <template>
-  <div class="scrollable-container" ref="container">
+  <el-scrollbar ref="container">
     <slot></slot>
-  </div>
+  </el-scrollbar>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import type { ScrollbarInstance } from 'element-plus'
 
-const container = ref<HTMLElement | null>(null);
+const container = ref<ScrollbarInstance>();
 
 const scrollToBottom = () => {
-  if (container.value) {
-    container.value.scrollTop = container.value.scrollHeight;
+  if (container.value?.wrapRef) {
+    const w = container.value.wrapRef;
+    container.value.scrollTo(0, w.scrollHeight);
   }
 };
 
-const scrollToBottomIfNear = () => {
-  if (container.value) {
-    const clientHeight = container.value.clientHeight;
-    const scrollHeight = container.value.scrollHeight;
-    const scrollTop = container.value.scrollTop;
-    const NEAR = 100;
-    const near = scrollTop + clientHeight >= scrollHeight - NEAR;
+const scrollToBottomIfNear = (px: number = 100) => {
+  if (container.value?.wrapRef) {
+    const w = container.value.wrapRef;
+    const clientHeight = w.clientHeight;
+    const scrollHeight = w.scrollHeight;
+    const scrollTop = w.scrollTop;
+    const near = scrollTop + clientHeight >= scrollHeight - px;
     if (near) {
       scrollToBottom();
     }
@@ -36,12 +38,4 @@ defineExpose({
 });
 </script>
 
-<style scoped>
-.scrollable-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-}
-</style>
+<style scoped></style>

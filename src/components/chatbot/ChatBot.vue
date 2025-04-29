@@ -2,15 +2,42 @@
 // 聊天对话
 
 <template>
-  <ScrollableContainer ref="chatContainer" v-loading="loading">
-    <ChatBotOutput style="flex-grow: 1; flex-shrink: 1;" :messages="messages" :recommendations="recommendations"
-      @recommendation-click="handleRecommendationClick" />
-    <ChatBotInput ref="chatBotInput" @sendMessage="sendMessage" />
-  </ScrollableContainer>
+  <div class="container" v-loading="loading">
+    <div class="header">
+      <el-dropdown v-if="assignment">
+        <el-button tabindex="-1" text>
+          {{ assignment.title || '' }}
+          <el-icon class="el-icon--right">
+            <ArrowDown />
+          </el-icon>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item v-if="assignment.problem_list" :icon="EditPen"
+              @click="emit('exercise-click', assignment.id)">
+              {{ assignment.problem_list.title || '习题' }}
+            </el-dropdown-item>
+            <el-dropdown-item v-for="(p, i) in assignment.pdfs" :key="p.id" :icon="Document"
+              @click="emit('pdf-click', p.id)">
+              {{ p.title || '附件' }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+    <ScrollableContainer class="main" ref="chatContainer">
+      <ChatBotOutput class="chatbot-output" :messages="messages" :recommendations="recommendations"
+        @recommendation-click="handleRecommendationClick" />
+    </ScrollableContainer>
+    <div class="footer">
+      <ChatBotInput class="chatbot-input" ref="chatBotInput" @sendMessage="sendMessage" />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
+import { ArrowDown, EditPen, Document } from '@element-plus/icons-vue';
 import ChatBotOutput from './ChatBotOutput.vue';
 import ChatBotInput from './ChatBotInput.vue';
 import { axiosInstance } from '../../services/http';
@@ -19,6 +46,12 @@ import ScrollableContainer from './ScrollableContainer.vue';
 import { fetchStreamResponse } from '../../services/streamService';
 
 const props = defineProps<{ assignmentId?: string }>();
+
+const emit = defineEmits<{
+  (event: 'exercise-click', assignment_id: string): void;
+  (event: 'pdf-click', pdf_id: string): void;
+}>();
+
 const messages = ref<ChatBotMessageModel[]>([]);
 const recommendations = ref<string[]>([]);
 const chatContainer = ref();
@@ -37,6 +70,7 @@ const loadMessages = async () => {
     if (conversation_id) {
       const response = await axiosInstance.get(`/chat/conversations/${conversation_id}/messages/`);
       messages.value = response.data.messages;
+      await loadRecommendations(conversation_id);
     } else {
       if (template_id) {
         const response2 = await axiosInstance.get(`/chat/templates/${template_id}/`);
@@ -102,9 +136,9 @@ const sendMessage = async (messageContent: string) => {
     assistantMessage.value.state = 'completed';
 
     // 获取推荐问题
-    const recommendationsResponse = await axiosInstance.get(`/chat/conversations/${conversation_id}/recommendations/`);
-    recommendations.value = recommendationsResponse.data.recommendations;
-
+    await loadRecommendations(conversation_id)
+    await nextTick();
+    chatContainer.value.scrollToBottomIfNear(300);
     chatBotInput.value.sendEnd();
   } catch (error) {
     console.error('Error sending message:', error);
@@ -121,10 +155,20 @@ const loadAssignment = async () => {
 
   const response = await axiosInstance.get(`/assign/homeworks/${props.assignmentId}/`);
   const d = response.data;
+  const a = d.assignment;
   assignment.value = {
+    id: a.id,
+    title: a.conversation_template?.title || a.problem_list.title,
     conversation_id: d.homework?.conversation,
-    template_id: d.assignment.conversation_template?.id,
+    template_id: a.conversation_template?.id,
+    problem_list: a.problem_list,
+    pdfs: d.pdfs.map((x) => ({ id: x.pdf.id, title: x.pdf.title })),
   };
+};
+
+const loadRecommendations = async (conversation_id: string) => {
+  const recommendationsResponse = await axiosInstance.get(`/chat/conversations/${conversation_id}/recommendations/`);
+  recommendations.value = recommendationsResponse.data.recommendations;
 };
 
 // 当切换会话时
@@ -141,4 +185,43 @@ watch(
 );
 </script>
 
-<style scoped></style>
+<style scoped>
+.container {
+  border: var(--el-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  height: 3em;
+  padding: 0.5em 1em;
+}
+
+.header .el-dropdown {
+  cursor: pointer;
+  color: var(--el-color-primary);
+  display: flex;
+  align-items: center;
+}
+
+.main {
+  flex: 1;
+}
+
+.chatbot-output {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 16px;
+}
+
+.chatbot-input {
+  width: 800px;
+  max-width: 800px;
+  border-radius: var(--el-border-radius-round);
+}
+</style>

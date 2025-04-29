@@ -2,18 +2,20 @@
 // 聊天输入框
 
 <template>
-  <div class="sticky-footer">
-    <el-input v-model="textareaValue" style="width: 100%" :rows="2" type="textarea" placeholder="Please input"
-      @keydown.enter.prevent @keyup.enter="handleKeyUpEnter" :disabled="sendDisabled" />
-    <el-button class="send-button" @click="sendBegin()" type="primary" :icon="Promotion" circle
-      :disabled="sendDisabled" />
+  <div class="container">
+    <el-input v-model="textareaValue" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" placeholder="有什么问题尽管问我"
+      @keydown.enter.prevent @keyup.enter="handleKeyUpEnter" />
+    <div class="footer">
+      <el-button class="send-button" @click="sendBegin()" type="primary" :icon="Upload" circle :loading="sendDisabled"
+        :disabled="!textareaValue" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { ElInput, ElButton } from 'element-plus';
-import { Promotion } from '@element-plus/icons-vue';
+import { Upload } from '@element-plus/icons-vue';
 
 const emit = defineEmits(['sendMessage']);
 const textareaValue = ref('');
@@ -23,7 +25,9 @@ const handleKeyUpEnter = async (e: KeyboardEvent) => {
   if (e.ctrlKey || e.shiftKey) {
     textareaValue.value += '\n';
   } else {
-    sendBegin();
+    if (textareaValue.value) {
+      sendBegin();
+    }
   }
 };
 
@@ -34,6 +38,7 @@ const sendBegin = async (newTextareaValue?: string) => {
   try {
     sendDisabled.value = true;
     emit('sendMessage', textareaValue.value);
+    textareaValue.value = '';
   } catch (error) {
     console.error('Error in sendMessage:', error);
     sendDisabled.value = false;
@@ -41,7 +46,6 @@ const sendBegin = async (newTextareaValue?: string) => {
 };
 
 const sendEnd = async () => {
-  textareaValue.value = '';
   sendDisabled.value = false;
 };
 
@@ -49,17 +53,28 @@ defineExpose({ sendBegin, sendEnd });
 </script>
 
 <style scoped>
-.sticky-footer {
-  position: sticky;
-  bottom: 0;
-  background: white;
-  padding: 10px;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+.container {
+  padding: 5px;
+  border: var(--el-border);
+  box-shadow: var(--el-box-shadow-lighter);
+}
+
+.container:focus-within {
+  border-color: var(--el-color-primary);
+}
+
+:deep(.el-textarea__inner) {
+  resize: none;
+  box-shadow: none !important;
+  font-size: var(--el-font-size-medium);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .send-button {
-  position: absolute;
-  right: 10px;
-  top: 10px;
+  margin: 5px;
 }
 </style>

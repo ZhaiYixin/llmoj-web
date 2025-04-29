@@ -1,8 +1,8 @@
 <template>
   <div class="chatbot-view">
-    <ChatBotSidebar v-model:assignmentId="assignmentId" @exercise-click="handleExerciseClick"
+    <ChatBotSidebar v-model:assignmentId="assignmentId" />
+    <ChatBot class="main-content" :assignmentId="assignmentId" @exercise-click="handleExerciseClick"
       @pdf-click="handlePdfClick" />
-    <ChatBot class="main-content" :assignmentId="assignmentId" />
   </div>
 </template>
 

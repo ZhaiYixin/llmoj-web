@@ -1,25 +1,17 @@
 <template>
   <el-scrollbar class="aside">
-    <el-menu ref="menuRef" :default-active="defaultActive" unique-opened @open="handleOpen">
-      <el-sub-menu v-for="(a, i) in assignments" :key="a.id" :index="`${a.id}`">
+    <el-menu ref="menuRef">
+      <el-sub-menu v-for="(c, i) in classGroups" :key="c.id" :index="`${c.id}`">
         <template #title>
-          <el-icon>
-            <ChatDotRound />
-          </el-icon>
-          <el-text truncated>{{ a.title }}</el-text>
-        </template>
-        <el-menu-item :index="`${a.id}-e${a.e.id}`" @click="handleExerciseClick(a.id)">
-          <el-icon>
-            <Edit />
-          </el-icon>
-          <el-text truncated>{{ a.e.title }}</el-text>
-        </el-menu-item>
-        <el-menu-item v-for="(p, i) in a.pdfs" :key="p.id" :index="`${a.id}-p${p.id}`"
-          @click="handlePdfClick(p.pdf.id)">
           <el-icon>
             <Reading />
           </el-icon>
-          <el-text truncated>{{ p.pdf.title }}</el-text>
+          <el-text class="group-title" truncated>{{ c.title }}</el-text>
+        </template>
+        <el-menu-item v-for="(a, j) in c.assignments" :key="a.id" :index="`${c.id}-${a.id}`"
+          @click="handleAssignmentClick(a.id)">
+          <el-text truncated :class="{ 'active': selectedAssignment == a.id }">
+            {{ a.title }}</el-text>
         </el-menu-item>
       </el-sub-menu>
     </el-menu>
@@ -28,41 +20,35 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { Edit, Reading, ChatDotRound } from '@element-plus/icons-vue';
+import { Reading } from '@element-plus/icons-vue';
 import { axiosInstance } from '@/services/http';
-
-const emit = defineEmits<{
-  (event: 'exercise-click', assignment_id: string): void;
-  (event: 'pdf-click', pdf_id: string): void;
-}>();
 
 const selectedAssignment = defineModel<string>('assignment-id', { default: undefined });
 
 const menuRef = ref();
-const defaultActive = ref();
-const assignments = ref([]);
+const classGroups = ref([]);
 
-const handleOpen = (indexPath: string[]) => {
-  selectedAssignment.value = indexPath[0];
-};
-
-const handleExerciseClick = (assignment_id: string) => {
-  emit('exercise-click', assignment_id);
-};
-
-const handlePdfClick = (pdf_id: string) => {
-  emit('pdf-click', pdf_id);
+const handleAssignmentClick = (assignment_id: string) => {
+  selectedAssignment.value = assignment_id;
 }
 
 const loadAssignments = async () => {
   const response = await axiosInstance.get('/assign/homeworks/');
-  assignments.value = response.data.map((x) => {
-    const a = x.assignment;
+  classGroups.value = response.data.map((x) => {
+    const c = x.class_group;
+    const ls = x.assignments;
+    const ls_ = ls.map((x) => {
+      const a = x.assignment;
+      const y = {
+        id: a.id,
+        title: a.conversation_template?.title || a.problem_list.title,
+      };
+      return y;
+    });
     const y = {
-      id: a.id,
-      title: a.conversation_template?.title || a.problem_list.title,
-      e: a.problem_list,
-      pdfs: x.pdfs,
+      id: c.id,
+      title: c.title,
+      assignments: ls_,
     };
     return y;
   });
@@ -70,8 +56,10 @@ const loadAssignments = async () => {
 
 onMounted(async () => {
   await loadAssignments();
-  if (assignments.value.length > 0) {
-    menuRef.value.open(assignments.value[0].id);
+  const c = classGroups.value.find((c) => c.assignments.length > 0);
+  if (c) {
+    menuRef.value.open(c.id);
+    selectedAssignment.value = c.assignments[0].id;
   }
 });
 </script>
@@ -79,6 +67,25 @@ onMounted(async () => {
 <style scoped>
 .aside {
   width: 20em;
-  border-right: var(--el-border);
+  border: var(--el-border);
+  background-color: #F3F5F6;
+}
+
+.el-menu {
+  --el-menu-bg-color: #F3F5F6;
+  border-right: none;
+}
+
+.el-menu:hover {
+  --el-menu-hover-bg-color: #EBEDEE;
+}
+
+.group-title {
+  --el-text-font-size: var(--el-font-size-medium);
+}
+
+.active {
+  color: var(--el-color-primary);
+  font-weight: bold;
 }
 </style>

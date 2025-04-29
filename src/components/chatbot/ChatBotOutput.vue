@@ -5,10 +5,10 @@
   <div class="chat-conversation">
     <ChatBotMessage v-for="(message, index) in props.messages" :key="index" :message="message" />
     <div class="recommendations">
-      <button v-for="(recommendation, index) in props.recommendations" :key="index"
+      <el-button v-for="(recommendation, index) in props.recommendations" :key="index" text bg
         @click="handleRecommendationClick(recommendation)">
         {{ recommendation }}
-      </button>
+      </el-button>
     </div>
   </div>
 </template>
@@ -43,18 +43,9 @@ function handleRecommendationClick(recommendation: string) {
 }
 
 .recommendations {
-  margin-top: 10px;
-}
-
-.recommendations button {
-  margin: 5px;
-  padding: 10px;
-  background-color: #f0f0f0;
-  border: none;
-  cursor: pointer;
-}
-
-.recommendations button:hover {
-  background-color: #e0e0e0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-bottom: 1em;
 }
 </style>
