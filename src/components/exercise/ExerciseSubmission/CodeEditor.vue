@@ -75,7 +75,7 @@ onMounted(async () => {
       theme: 'vs-light',
       automaticLayout: true,
       wordWrap: 'on',
-      fontSize: 14,
+      fontSize: 20,
       renderWhitespace: 'all',
       lineNumbersMinChars: 2,
       showFoldingControls: 'always',

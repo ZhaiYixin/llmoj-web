@@ -5,9 +5,9 @@
   <div class="chat-conversation">
     <ChatBotMessage v-for="(message, index) in props.messages" :key="index" :message="message" />
     <div class="recommendations">
-      <el-button v-for="(recommendation, index) in props.recommendations" :key="index" text bg
+      <el-button class="recommendation" v-for="(recommendation, index) in props.recommendations" :key="index" text bg
         @click="handleRecommendationClick(recommendation)">
-        {{ recommendation }}
+        <el-text truncated>{{ recommendation }}</el-text>
       </el-button>
     </div>
   </div>
@@ -47,5 +47,13 @@ function handleRecommendationClick(recommendation: string) {
   flex-wrap: wrap;
   gap: 0.5em;
   margin-bottom: 1em;
+}
+
+.recommendation {
+  overflow: hidden;
+}
+
+:deep(.recommendation>span) {
+  max-width: 100%;
 }
 </style>

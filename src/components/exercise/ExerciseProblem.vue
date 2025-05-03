@@ -125,20 +125,22 @@ watch(() => props.assignmentId, () => {
 }
 
 .header {
+  height: 2.5em;
   border-bottom: 1px solid var(--el-border-color);
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .title {
   flex: 1;
-  font: bold;
-  font-size: large;
+  font-size: var(--el-font-size-extra-large);
 }
 
 .description {
   flex: 1;
   display: flex;
   flex-direction: column;
+  font-size: var(--el-font-size-medium);
 }
 </style>

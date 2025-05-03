@@ -57,6 +57,7 @@ const compiledMarkdown = (content: string) => {
   border-radius: 5px;
   overflow-x: hidden;
   font-size: var(--el-font-size-medium);
+  max-width: 100%;
 }
 
 .message.user {

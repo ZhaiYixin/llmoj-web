@@ -55,7 +55,7 @@ const startDragging = (event: MouseEvent) => {
 .splitter {
   width: 5px;
   cursor: col-resize;
-  background-color: #ccc;
+  background-color: #F0F2F5;
   user-select: none;
 }
 </style>

@@ -1,8 +1,13 @@
 <template>
-  <ScrollableContainer class="chat" ref="scrollableContainerRef">
-    <ChatBotOutput style="flex-grow: 1; flex-shrink: 1;" :messages="messages" />
-    <ChatBotInput ref="chatBotInputRef" @sendMessage="sendMessage" />
-  </ScrollableContainer>
+  <div class="chat">
+    <ScrollableContainer class="main" ref="scrollableContainerRef">
+      <ChatBotOutput class="chatbot-output" :messages="messages" :recommendations="recommendations"
+        @recommendation-click="handleRecommendationClick" />
+    </ScrollableContainer>
+    <div class="footer">
+      <ChatBotInput class="chatbot-input" ref="chatBotInputRef" @sendMessage="sendMessage" />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -21,6 +26,7 @@ const props = defineProps<{
 
 const scrollableContainerRef = ref();
 const messages = ref([]);
+const recommendations = ref<string[]>([]);
 const chatBotInputRef = ref();
 
 const loadMessages = async (problem_id: string) => {
@@ -34,6 +40,7 @@ const loadMessages = async (problem_id: string) => {
       };
       return y;
     });
+    await loadRecommendations(problem_id);
     await nextTick();
     scrollableContainerRef.value.scrollToBottom();
   } catch (error) {
@@ -43,6 +50,7 @@ const loadMessages = async (problem_id: string) => {
 
 const sendMessage = async (messageContent: string) => {
   if (!props.problemId) return;
+  recommendations.value = [];
   const userMessage = { role: 'user', content: messageContent };
   const assistantMessage = ref({ role: 'assistant', content: '', state: 'loading' });
   messages.value.push(userMessage);
@@ -69,10 +77,22 @@ const sendMessage = async (messageContent: string) => {
     );
 
     assistantMessage.value.state = 'completed';
+    await loadRecommendations(props.problemId)
+    await nextTick();
+    scrollableContainerRef.value.scrollToBottomIfNear(300);
     chatBotInputRef.value.sendEnd();
   } catch (error) {
     console.error('Error sending message:', error);
   }
+};
+
+const loadRecommendations = async (problem_id: string) => {
+  const response = await axiosInstance.get(`/judge/problems/${problem_id}/recommendations/`);
+  recommendations.value = response.data.recommendations;
+};
+
+const handleRecommendationClick = async (recommendation: string) => {
+  chatBotInputRef.value.sendBegin(recommendation);
 };
 
 watch(() => props.problemId, () => {
@@ -100,5 +120,26 @@ watch(() => props.active, async () => {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+}
+
+.chatbot-output {
+  width: calc(100% - 10px);
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+}
+
+.chatbot-input {
+  width: 100%;
+  max-width: 800px;
 }
 </style>
