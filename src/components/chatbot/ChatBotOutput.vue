@@ -56,4 +56,8 @@ function handleRecommendationClick(recommendation: string) {
 :deep(.recommendation>span) {
   max-width: 100%;
 }
+
+:deep(.el-button) {
+  margin-left: 0 !important;
+}
 </style>

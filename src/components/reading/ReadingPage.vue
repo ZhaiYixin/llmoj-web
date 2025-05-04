@@ -1,13 +1,12 @@
 <template>
   <div class="pdf-viewer">
-    <ReadingTopToolbar :num-pages="numPages" :current="current" v-model:show-outline="showOutline" v-model:scale="scale"
-      v-model:rotation="rotation" v-model:show-chat="showChat" @jump="handleToolbarJump"
-      @scale-fit="handleToolbarScaleFit" />
+    <ReadingTopToolbar :num-pages="numPages" :current="current" v-model:sidebar="sidebar" v-model:scale="scale"
+      v-model:rotation="rotation" @jump="handleToolbarJump" @scale-fit="handleToolbarScaleFit" />
     <div class="pdf-main">
-      <ReadingLeftOutline v-if="showOutline" :pdf-id="pdfId" :current="current" @jump="handleOutlineJump" />
+      <ReadingLeftOutline v-if="sidebar == 'outline'" :pdf-id="pdfId" :current="current" @jump="handleOutlineJump" />
+      <ReadingRightChat v-else-if="sidebar == 'chat'" :pdf-id="pdfId" :current="current" />
       <ReadingPDFRender ref="pdfRenderRef" v-model:num-pages="numPages" v-model:current="current" v-model:scale="scale"
         v-model:rotation="rotation" class="pdf-render" />
-      <ReadingRightChat v-if="showChat" :pdf-id="pdfId" :current="current" />
     </div>
   </div>
 </template>
@@ -25,13 +24,12 @@ const props = defineProps<{
   pdfId?: string;
 }>();
 
-const showOutline = ref(true);
+const sidebar = ref<'outline' | 'chat' | ''>('outline');
 const pdfRenderRef = ref();
 const numPages = ref(1);
 const current = ref(1);
 const scale = ref(1);
 const rotation = ref(0);
-const showChat = ref(true);
 
 const handleToolbarJump = (pageNum: number) => {
   pdfRenderRef.value?.jumpToPage(pageNum);

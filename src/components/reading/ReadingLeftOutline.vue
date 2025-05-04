@@ -2,8 +2,10 @@
   <el-scrollbar class="outline">
     <el-text class="title" truncated>{{ title }}</el-text>
     <div class="sections">
-      <div v-for="section in sections" :key="section.id" class="section" @click="jumpToPage(section.start_page)">
-        <el-tooltip :content="`${section.description}(${section.start_page}-${section.end_page})`">
+      <div v-for="section in sections" :key="section.id" class="section"
+        :class="{ 'active': activeSection?.id == section.id }" @click="jumpToPage(section.start_page)">
+        <el-tooltip
+          :content="section.start_page == section.end_page ? `第${section.start_page}页` : `第${section.start_page}页-第${section.end_page}页`">
           <el-text class="section-title" truncated>{{ section.title }}</el-text>
         </el-tooltip>
       </div>
@@ -12,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { axiosInstance } from '@/services/http';
 
 interface Section {
@@ -35,14 +37,14 @@ const emit = defineEmits<{
 const title = ref('');
 const sections = ref<Array<Section>>([]);
 
+const activeSection = computed(() => {
+  // 根据当前页计算当前的 section
+  const ret = sections.value.find((section) => section.start_page <= props.current && props.current <= section.end_page);
+  return ret;
+});
+
 const jumpToPage = (pageNum: number) => {
   emit('jump', pageNum);
-};
-
-const calActiveSection = () => {
-  // 根据当前页计算当前的 section
-  const ret = sections.value.findIndex((section) => section.start_page <= props.current && props.current <= section.end_page);
-  return ret;
 };
 
 const loadPDFAnalysis = async (pdf_id: string) => {
@@ -59,20 +61,9 @@ watch(() => props.pdfId, () => {
 }, { immediate: true })
 
 watch(() => props.current, () => {
-  const activeIndex = calActiveSection();
-  if (activeIndex !== -1) {
-    // 遍历所有 sections，添加或移除高亮
-    const sectionElements = document.querySelectorAll('.section');
-    sectionElements.forEach((element, index) => {
-      if (index === activeIndex) {
-        element.classList.add('active');
-      } else {
-        element.classList.remove('active');
-      }
-    });
-
+  if (activeSection.value) {
     // 滚动到当前高亮的 section
-    const activeElement = sectionElements[activeIndex];
+    const activeElement = document.querySelector('.section.active');
     if (activeElement) {
       activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -88,7 +79,7 @@ watch(() => props.current, () => {
 }
 
 .title {
-  font-size: 1.5em;
+  --el-text-font-size: var(--el-font-size-medium);
   font-weight: bold;
   padding: 1em;
 }
@@ -105,7 +96,6 @@ watch(() => props.current, () => {
 
 .section-title {
   padding: 0.2em 2em;
-  font-size: 1.2em;
 }
 
 .section.active .section-title {

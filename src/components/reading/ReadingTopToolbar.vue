@@ -1,7 +1,12 @@
 <template>
   <el-row class="toolbar">
     <el-col :span="4">
-      <el-button :icon="MenuListIcon" text :bg="showOutline" @click="handleShowOutlineButtonClick" />
+      <el-button-group>
+        <el-button :icon="MenuListIcon" :type="sidebar == 'outline' ? 'primary' : 'default'" text
+          :bg="sidebar == 'outline'" @click="handleShowOutlineButtonClick" />
+        <el-button :icon="ChatDotRound" :type="sidebar == 'chat' ? 'primary' : 'default'" text :bg="sidebar == 'chat'"
+          @click="handleShowChatButtonClick" />
+      </el-button-group>
     </el-col>
     <el-col :span="16" class="toolbar-middle">
       <el-input-number v-model="scaleInPercent" @change="onScaleInPercentChange" :min="0" :step="20">
@@ -47,7 +52,6 @@
       </el-button>
     </el-col>
     <el-col :span="4" class="toolbar-right">
-      <el-button :icon="ChatDotRound" text :bg="showChat" @click="handleShowChatButtonClick" />
     </el-col>
   </el-row>
 </template>
@@ -71,17 +75,20 @@ const emit = defineEmits<{
   (event: 'scale-fit', mode: 'width' | 'height'): void;
 }>();
 
-const showOutline = defineModel<boolean>('show-outline', { default: true });
+const sidebar = defineModel<'outline' | 'chat' | ''>('sidebar', { default: 'outline' });
 const scale = defineModel<number>('scale', { default: 1 });
 const rotation = defineModel<number>('rotation', { default: 0 });
-const showChat = defineModel<boolean>('show-chat', { default: true });
 
 const currentPage = ref(props.current);
 const scaleInPercent = ref(100);
 const scaleFitMode = ref<'width' | 'height'>('width');
 
 const handleShowOutlineButtonClick = () => {
-  showOutline.value = !showOutline.value;
+  sidebar.value = sidebar.value == 'outline' ? '' : 'outline';
+}
+
+const handleShowChatButtonClick = () => {
+  sidebar.value = sidebar.value == 'chat' ? '' : 'chat';
 }
 
 const onPageChange = (page: number) => {
@@ -110,10 +117,6 @@ const handleRotateRight = () => {
   rotation.value = (rotation.value + 90) % 360;
 };
 
-const handleShowChatButtonClick = () => {
-  showChat.value = !showChat.value;
-}
-
 watch(() => props.current, () => {
   currentPage.value = props.current;
 });
@@ -125,7 +128,7 @@ watch(scale, (value) => {
 
 <style scoped>
 .toolbar {
-  padding: 10px;
+  padding: 5px;
   background-color: #FAFAFA;
   border-bottom: var(--el-border);
 }
