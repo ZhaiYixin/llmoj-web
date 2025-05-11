@@ -81,7 +81,7 @@ const loadAssignment = async (assignment_id: string) => {
   const a = response.data.assignment;
   assignment.value = {
     class_group: String(a.class_group),
-    problem_list: String(a.problem_list),
+    problem_list: String(a.problem_list.id),
   };
   homeworks.value = response.data.homeworks;
 };

@@ -1,5 +1,5 @@
 <template>
-  <div class="exercise-problem">
+  <el-scrollbar class="exercise-problem">
     <div class="header">
       <el-text truncated class="title" size="large">{{ title }}</el-text>
       <div v-if="problemList.length">
@@ -24,7 +24,7 @@
       </div>
     </div>
     <TextEditor class="description" v-model="description" :readonly="true" />
-  </div>
+  </el-scrollbar>
 </template>
 
 <script setup lang="ts">

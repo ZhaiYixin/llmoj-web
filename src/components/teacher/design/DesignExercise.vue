@@ -201,6 +201,7 @@ userStore.fetchInfo();
 
 .main {
   flex: 1;
+  overflow-x: hidden;
   height: 100%;
 }
 </style>

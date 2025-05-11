@@ -18,8 +18,8 @@
       <el-button @click="handlePlusButtonClick" :icon="Plus">新建</el-button>
     </div>
     <el-table class="table" :data="tableData">
-      <el-table-column prop="title" label="任务" show-overflow-tooltip />
-      <el-table-column prop="created_at" label="创建于" show-overflow-tooltip />
+      <el-table-column prop="title" label="任务" show-overflow-tooltip :width="200" />
+      <!-- <el-table-column prop="created_at" label="创建于" show-overflow-tooltip /> -->
       <el-table-column prop="release_date" label="开始时间" show-overflow-tooltip />
       <el-table-column prop="due_date" label="结束时间" show-overflow-tooltip />
       <el-table-column prop="homeworks_count" label="已开始" />
@@ -80,7 +80,7 @@ const load = async () => {
 
   let rows = response.data.map((a: any) => ({
     id: a.assignment.id,
-    title: a.assignment.id,
+    title: a.assignment.problem_list.title,
     release_date: dayjs(a.assignment.release_date).format('YYYY-MM-DD'),
     due_date: dayjs(a.assignment.due_date).format('YYYY-MM-DD'),
     created_at: dayjs(a.assignment.created_at).format('YYYY-MM-DD'),

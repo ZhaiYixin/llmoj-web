@@ -8,7 +8,7 @@ import monacoEditorPlugin from 'vite-plugin-monaco-editor'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), vueJsx(), vueDevTools(), monacoEditorPlugin({})],
+  plugins: [vue(), vueJsx(), monacoEditorPlugin({})],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

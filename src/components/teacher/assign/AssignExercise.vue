@@ -137,7 +137,7 @@ const saveAssignment = async (method: 'post' | 'put') => {
   const url = (method == 'post') ? `/assign/assignments/` : `/assign/assignments/${assignmentId.value}/`;
   return await axiosInstance[method](url, {
     class_group: assignment.value.class_group,
-    problem_list: assignment.value.problem_list,
+    problem_list_id: assignment.value.problem_list,
     release_date: assignment.value.release_date,
     due_date: assignment.value.due_date,
     pdfs: pdfs.value.map(p => p.id),
@@ -149,7 +149,7 @@ const loadAssignment = async () => {
   const response = await axiosInstance.get(url);
   const a = response.data.assignment;
   assignment.value.class_group = String(a.class_group);
-  assignment.value.problem_list = String(a.problem_list);
+  assignment.value.problem_list = String(a.problem_list.id);
   assignment.value.release_date = a.release_date;
   assignment.value.due_date = a.due_date;
   pdfs.value = response.data.pdfs.map(p => p.pdf);

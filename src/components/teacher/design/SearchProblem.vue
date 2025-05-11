@@ -82,7 +82,7 @@ const load = async () => {
     return {
       id: String(p.problem.id),
       title: p.problem.title,
-      description: p.problem.description,
+      description: p.problem.description.replace(/<\/?[^>]+(>|$)/g, ""),
       designer: p.design ? p.design.designer.full_name : '',
       updatedAt: dayjs(p.problem.updated_at).format('YYYY-MM-DD'),
     };
