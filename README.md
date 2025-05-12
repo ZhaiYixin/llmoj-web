@@ -15,7 +15,7 @@
 
 页面的跳转关系如下：
 
-![页面跳转图](docs\img\page_navigation.png)
+![页面跳转图](https://github.com/ZhaiYixin/llmoj-web/blob/main/docs/img/page_navigation.png?raw=true)
 
 ## 有用到什么第三方库吗？
 
