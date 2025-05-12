@@ -1,64 +1,26 @@
-# llmoj-web
+## 有哪些页面？
 
-This template should help get you started developing with Vue 3 in Vite.
+- 学生端
+  1. 聊天机器人（`ChatBotView.vue`）
+  2. OJ做题（`ExerciseView.vue`）
+  3. PDF阅读器（`ReadingView.vue`）
+- 教师端
+  1. 出题（`DesignProblemView.vue`）
+  2. 组题（`DesignExerciseView.vue`）
+  3. 布置作业（`AssignExerciseView.vue`）
+  4. 教学班级（`AssignClassesView.vue`）
+  5. 完成情况（`AssignStudentsView.vue`）
 
-## Recommended IDE Setup
+## 这些页面之间的关系？
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+页面的跳转关系如下：
 
-## Type Support for `.vue` Imports in TS
+![页面跳转图](docs\img\page_navigation.png)
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+## 有用到什么第三方库吗？
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Run Unit Tests with [Vitest](https://vitest.dev/)
-
-```sh
-npm run test:unit
-```
-
-### Run End-to-End Tests with [Playwright](https://playwright.dev)
-
-```sh
-# Install browsers for the first run
-npx playwright install
-
-# When testing on CI, must build the project first
-npm run build
-
-# Runs the end-to-end tests
-npm run test:e2e
-# Runs the tests only on Chromium
-npm run test:e2e -- --project=chromium
-# Runs the tests of a specific file
-npm run test:e2e -- tests/example.spec.ts
-# Runs the tests in debug mode
-npm run test:e2e -- --debug
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+- 渲染Markdown文本（`"marked": "^15.0.7"`）
+- 代码语法高亮（`"highlight.js": "^11.11.1"`）
+- 代码编辑器（`"monaco-editor": "^0.52.2"`）
+- 富文本编辑器（`"@wangeditor/editor": "^5.1.23"`）
+- 渲染PDF文档（`"pdfjs-dist": "^5.1.91"`）
